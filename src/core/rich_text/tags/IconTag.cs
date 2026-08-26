@@ -7,10 +7,6 @@ namespace Espejismo.Core.RichText.Tags;
 ///   A self-closing text tag that inserts an icon at the tag's position.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Void Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b>
 ///   <list type="bullet">
 ///     <item>
@@ -30,11 +26,13 @@ namespace Espejismo.Core.RichText.Tags;
 ///       <description>The dimensions of the texture rect, formatted as <c>WxH</c>.</description>
 ///     </item>
 ///   </list>
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class IconTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => true;
+
 	/// <inheritdoc/>
 	public override bool Begin(TextBuilder builder, ReadOnlySpan<TagAttribute> attributes)
 	{

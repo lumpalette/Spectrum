@@ -7,16 +7,14 @@ namespace Espejismo.Core.RichText.Tags;
 ///   A self-closing text tag that inserts a <see cref="TextMarker"/> at the tag's position.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Void Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b> Varies (depends on the marker's purpose).
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class MarkerTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => true;
+
 	/// <summary>
 	///   Gets the name of the marker, configured through the editor.
 	/// </summary>
@@ -26,7 +24,7 @@ public sealed partial class MarkerTag : TextTag
 	/// <inheritdoc/>
 	public override bool Begin(TextBuilder builder, ReadOnlySpan<TagAttribute> attributes)
 	{
-		builder.AppendMarker(MarkerName ?? "<null>", attributes);
+		builder.AppendMarker(MarkerName, attributes);
 		return true;
 	}
 }

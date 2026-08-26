@@ -22,62 +22,45 @@
 [ext_resource type="Script" uid="uid://cr78my2u6gu0u" path="res://src/core/rich_text/effects/ShakeEffect.cs" id="17_wiolj"]
 [ext_resource type="Script" uid="uid://cltvb5woimgqd" path="res://src/core/rich_text/effects/TornadoEffect.cs" id="18_wre4d"]
 
-[sub_resource type="Resource" id="Resource_y063w"]
-script = ExtResource("7_5gef2")
-metadata/_custom_type_script = "uid://c7qa3sldws3gd"
-
 [sub_resource type="Resource" id="Resource_ux4ge"]
 script = ExtResource("15_q3go3")
 FontStyle = 1
 metadata/_custom_type_script = "uid://cub3ipdnjgvd4"
 
-[sub_resource type="Resource" id="Resource_hnlj2"]
-script = ExtResource("15_q3go3")
-FontStyle = 2
-metadata/_custom_type_script = "uid://cub3ipdnjgvd4"
-
-[sub_resource type="Resource" id="Resource_8k37f"]
-script = ExtResource("8_q3go3")
-metadata/_custom_type_script = "uid://cs3odg278xwhh"
+[sub_resource type="Resource" id="Resource_y063w"]
+script = ExtResource("7_5gef2")
+metadata/_custom_type_script = "uid://c7qa3sldws3gd"
 
 [sub_resource type="Resource" id="Resource_5noam"]
 script = ExtResource("8_q3go3")
 Alignment = 1
 metadata/_custom_type_script = "uid://cs3odg278xwhh"
 
-[sub_resource type="Resource" id="Resource_sdt18"]
-script = ExtResource("8_q3go3")
-Alignment = 2
-metadata/_custom_type_script = "uid://cs3odg278xwhh"
+[sub_resource type="Resource" id="Resource_b7788"]
+script = ExtResource("9_u6yl1")
+metadata/_custom_type_script = "uid://cqgt54sy0g1t6"
+
+[sub_resource type="Resource" id="Resource_hnlj2"]
+script = ExtResource("15_q3go3")
+FontStyle = 2
+metadata/_custom_type_script = "uid://cub3ipdnjgvd4"
+
+[sub_resource type="Resource" id="Resource_qfv8k"]
+script = ExtResource("10_a35j1")
+metadata/_custom_type_script = "uid://bgk2i03yjvnkr"
 
 [sub_resource type="Resource" id="Resource_li4dh"]
 script = ExtResource("8_q3go3")
 Alignment = 3
 metadata/_custom_type_script = "uid://cs3odg278xwhh"
 
-[sub_resource type="Resource" id="Resource_b7788"]
-script = ExtResource("9_u6yl1")
-metadata/_custom_type_script = "uid://cqgt54sy0g1t6"
-
-[sub_resource type="Resource" id="Resource_qfv8k"]
-script = ExtResource("10_a35j1")
-metadata/_custom_type_script = "uid://bgk2i03yjvnkr"
+[sub_resource type="Resource" id="Resource_8k37f"]
+script = ExtResource("8_q3go3")
+metadata/_custom_type_script = "uid://cs3odg278xwhh"
 
 [sub_resource type="Resource" id="Resource_kuu7q"]
 script = ExtResource("12_cmdmc")
 metadata/_custom_type_script = "uid://dugubxdpkpx1s"
-
-[sub_resource type="Resource" id="Resource_5ecmh"]
-script = ExtResource("13_rknj5")
-metadata/_custom_type_script = "uid://f57xm24lp6y5"
-
-[sub_resource type="Resource" id="Resource_j6rxj"]
-script = ExtResource("14_wiolj")
-metadata/_custom_type_script = "uid://c6avliqwl0rue"
-
-[sub_resource type="Resource" id="Resource_00cxe"]
-script = ExtResource("11_8f6p3")
-metadata/_custom_type_script = "uid://cjwm1veyo2eva"
 
 [sub_resource type="Resource" id="Resource_fh6ep"]
 script = ExtResource("15_cmdmc")
@@ -89,6 +72,15 @@ script = ExtResource("16_rknj5")
 Effect = SubResource("Resource_fh6ep")
 metadata/_custom_type_script = "uid://c3aax21xncwwh"
 
+[sub_resource type="Resource" id="Resource_sdt18"]
+script = ExtResource("8_q3go3")
+Alignment = 2
+metadata/_custom_type_script = "uid://cs3odg278xwhh"
+
+[sub_resource type="Resource" id="Resource_5ecmh"]
+script = ExtResource("13_rknj5")
+metadata/_custom_type_script = "uid://f57xm24lp6y5"
+
 [sub_resource type="Resource" id="Resource_ik8j0"]
 script = ExtResource("17_wiolj")
 metadata/_custom_type_script = "uid://cr78my2u6gu0u"
@@ -97,6 +89,14 @@ metadata/_custom_type_script = "uid://cr78my2u6gu0u"
 script = ExtResource("16_rknj5")
 Effect = SubResource("Resource_ik8j0")
 metadata/_custom_type_script = "uid://c3aax21xncwwh"
+
+[sub_resource type="Resource" id="Resource_j6rxj"]
+script = ExtResource("14_wiolj")
+metadata/_custom_type_script = "uid://c6avliqwl0rue"
+
+[sub_resource type="Resource" id="Resource_00cxe"]
+script = ExtResource("11_8f6p3")
+metadata/_custom_type_script = "uid://cjwm1veyo2eva"
 
 [sub_resource type="Resource" id="Resource_5imrv"]
 script = ExtResource("18_wre4d")

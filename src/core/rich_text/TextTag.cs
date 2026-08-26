@@ -10,6 +10,12 @@ namespace Espejismo.Core.RichText;
 public abstract partial class TextTag : TextResource
 {
 	/// <summary>
+	///   Gets a value indicating whether the tag is considered a void element, that is, an element that cannot have
+	///   any child nodes.
+	/// </summary>
+	public abstract bool IsVoid { get; }
+
+	/// <summary>
 	///   Called when an element begins, before its children are processed.
 	/// </summary>
 	/// <remarks>

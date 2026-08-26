@@ -7,10 +7,6 @@ namespace Espejismo.Core.RichText.Tags;
 ///   A text tag that changes the letter or line spacing of a specific segment of text.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Normal Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b>
 ///   <list type="bullet">
 ///     <item>
@@ -35,11 +31,13 @@ namespace Espejismo.Core.RichText.Tags;
 ///       </description>
 ///     </item>
 ///   </list>
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class SpacingTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => false;
+
 	/// <inheritdoc/>
 	public override bool Begin(TextBuilder builder, ReadOnlySpan<TagAttribute> attributes)
 	{

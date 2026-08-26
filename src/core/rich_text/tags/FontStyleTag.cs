@@ -7,16 +7,14 @@ namespace Espejismo.Core.RichText;
 ///   A text tag that changes the font style of a specific segment of text.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Normal Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b> None.
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class FontStyleTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => false;
+
 	/// <summary>
 	///   Gets the style variation applied by the tag, configured through the editor.
 	/// </summary>

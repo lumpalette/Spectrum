@@ -7,16 +7,12 @@ namespace Espejismo.Core.RichText.Tags;
 ///   Represents a tag that changes the font family of a specific segment of text.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Normal Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b>
 ///   <list type="bullet">
 ///     <item>
 ///       <term><c>[&lt;main&gt;]</c></term>
 ///       <description>
-///         Identifier for the new <see cref="FontFamily"/>, as defined in <see cref="TextConfig"/>
+///         Identifier for the new <see cref="FontFamily"/>, as defined in <see cref="TextConfig"/>.
 ///       </description>
 ///     </item>
 ///     <item>
@@ -24,11 +20,13 @@ namespace Espejismo.Core.RichText.Tags;
 ///       <description>The size of the font, in pixels. Must be greater than 0.</description>
 ///     </item>
 ///   </list>
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class FontTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => false;
+
 	/// <inheritdoc/>
 	public override bool Begin(TextBuilder builder, ReadOnlySpan<TagAttribute> attributes)
 	{

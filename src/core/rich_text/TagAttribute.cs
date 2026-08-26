@@ -3,7 +3,7 @@ using System;
 namespace Espejismo.Core.RichText;
 
 /// <summary>
-///   Represents a name-value string attribute associated to a <see cref="TextTag"/>.
+///   Represents a name-value string attribute associated with a <see cref="TextTag"/>.
 /// </summary>
 #pragma warning disable CA1711 // Identifiers should not have incorrect suffix
 public readonly struct TagAttribute
@@ -28,7 +28,7 @@ public readonly struct TagAttribute
 	///   Gets the name of the attribute.
 	/// </summary>
 	/// <remarks>
-	///   An empty name indicates that the current instance is a <b>main attribute</b> — the implicit attribute
+	///   An empty name indicates that the current instance is a <b>main attribute</b>, the implicit attribute
 	///   specified directly after the tag name (e.g. <c>aqua</c> in <c>"&lt;color=aqua&gt;"</c>), with no explicit
 	///   attribute name of its own.
 	/// </remarks>

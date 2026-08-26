@@ -10,7 +10,7 @@ public struct GlyphTransform
 	/// <summary>
 	///   Gets the number of seconds since the text started rendering.
 	/// </summary>
-	public required float ElapsedTime { get; init; }
+	public required double ElapsedTime { get; init; }
 
 	/// <summary>
 	///   Gets the normalized position of the glyph within the source line.

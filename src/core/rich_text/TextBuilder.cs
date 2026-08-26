@@ -121,7 +121,7 @@ public class TextBuilder
 	///   Appends a run of text using the <see cref="TopStyle"/>.
 	/// </summary>
 	/// <remarks>
-	///   If <paramref name="text"/> is <see langword="null"/> or empty, the method call is ignored.
+	///   If <paramref name="text"/> is empty, the method call is ignored.
 	/// </remarks>
 	/// <param name="text">
 	///   The text to append.
@@ -129,9 +129,14 @@ public class TextBuilder
 	/// <returns>
 	///   The same <see cref="TextBuilder"/> instance.
 	/// </returns>
+	/// <exception cref="ArgumentNullException">
+	///   Thrown if <paramref name="text"/> is <see langword="null"/>.
+	/// </exception>
 	public TextBuilder AppendText(string text)
 	{
-		if (string.IsNullOrEmpty(text))
+		ArgumentNullException.ThrowIfNull(text, nameof(text));
+
+		if (text.Length == 0)
 		{
 			return this;
 		}
@@ -155,8 +160,21 @@ public class TextBuilder
 	/// <returns>
 	///   The same <see cref="TextBuilder"/> instance.
 	/// </returns>
+	/// <exception cref="ArgumentException">
+	///   Thrown if <paramref name="size"/> is negative.
+	/// </exception>
+	/// <exception cref="ArgumentNullException">
+	///   Thrown if <paramref name="texture"/> is <see langword="null"/>.
+	/// </exception>
 	public TextBuilder AppendIcon(Texture2D texture, InlineAlignment alignment, Vector2 size)
 	{
+		ArgumentNullException.ThrowIfNull(texture, nameof(texture));
+		
+		if (size.X < 0 || size.Y < 0)
+		{
+			throw new ArgumentException($"Icon size {size} cannot be negative");
+		}
+
 		_items.Add(ShapeItem.CreateTexture(texture, alignment, size, TopStyle));
 		return this;
 	}
@@ -173,8 +191,13 @@ public class TextBuilder
 	/// <returns>
 	///   The same <see cref="TextBuilder"/> instance.
 	/// </returns>
+	/// <exception cref="ArgumentNullException">
+	///   Thrown if <paramref name="name"/> is <see langword="null"/>.
+	/// </exception>
 	public TextBuilder AppendMarker(string name, ReadOnlySpan<TagAttribute> attributes)
 	{
+		ArgumentNullException.ThrowIfNull(name, nameof(name));
+
 		_items.Add(ShapeItem.CreateMarker(name, attributes.ToArray()));
 		return this;
 	}

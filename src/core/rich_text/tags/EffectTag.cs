@@ -8,16 +8,14 @@ namespace Espejismo.Core.RichText.Tags;
 ///   A text tag that changes the visual effect of a specific segment of text.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Normal Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b> Varies (depends on the specific effect).
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class EffectTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => false;
+
 	/// <summary>
 	///   Gets the effect applied by the tag, configured through the editor.
 	/// </summary>

@@ -38,7 +38,7 @@ public sealed partial class GradientEffect : TextEffect
 		}
 
 		var pos = (trans.LinePosition * _frequency) + (trans.ElapsedTime * _speed);
-		var mod = Mathf.PosMod(pos, 1f);
+		var mod = (float)Mathf.PosMod(pos, 1f);
 		
 		trans.Color = _gradient.Sample(mod);
 

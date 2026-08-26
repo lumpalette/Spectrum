@@ -88,7 +88,10 @@ internal struct Synthesizer(Document document, TextBuilder builder)
 		var attrs = ConvertAttributeRange(node.AttributeStart, node.AttributeCount);
 		var success = tag.Begin(builder, attrs);
 
-		WalkBranch(nodeIndex);
+		if (node.ChildIndex != -1 && !tag.IsVoid)
+		{
+			WalkBranch(nodeIndex);
+		}
 
 		if (success)
 		{

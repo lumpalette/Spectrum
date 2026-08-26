@@ -141,6 +141,11 @@ public partial class TextConfig : TextResource
 			throw new InvalidOperationException($"Default style template is missing. TextConfig file path: '{Path}'");
 		}
 
+		if (config._defaultStyle.Font is null)
+		{
+			throw new InvalidOperationException($"Font from the default style template is missing. TextConfig file path: '{Path}'");
+		}
+
 		return config;
 	}
 }

@@ -7,16 +7,14 @@ namespace Espejismo.Core.RichText.Tags;
 ///   A text tag that changes the horizontal alignment of a text paragraph.
 /// </summary>
 /// <remarks>
-/// <para>
-///   <b>Type:</b> Normal Element.
-/// </para>
-/// <para>
 ///   <b>Attributes:</b> None.
-/// </para>
 /// </remarks>
 [GlobalClass, Tool]
 public sealed partial class AlignmentTag : TextTag
 {
+	/// <inheritdoc/>
+	public override bool IsVoid => false;
+
 	/// <summary>
 	///   Gets the type of alignment applied by the tag, configured through the editor.
 	/// </summary>

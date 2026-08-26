@@ -147,6 +147,33 @@ public partial class Text
 	}
 
 	/// <summary>
+	///   Gets the total size occupied by the shaped content, in pixels.
+	/// </summary>
+	/// <remarks>
+	/// <para>
+	///   The <see cref="Vector2.X"/> component is the width of the widest line, and the <see cref="Vector2.Y"/>
+	///   component is the sum of the heights of all the lines. The resulting vector is calculated at shape time, so
+	///   no recomputation is done per access.
+	/// </para>
+	/// <para>
+	///   For lines using <see cref="HorizontalAlignment.Fill"/>, the line's width reflects the width it was fit to,
+	///   rather than the natural width of its content.
+	/// </para>
+	/// <para>
+	///   A text reshape is triggered when accessing this property and <see cref="IsDirty"/> is <see langword="true"/>.
+	/// </para>
+	/// </remarks>
+	public Vector2 ContentSize
+	{
+		get
+		{
+			Shape();
+			return field;
+		}
+		private set;
+	}
+
+	/// <summary>
 	///   Gets or sets the horizontal alignment of the text.
 	/// </summary>
 	public HorizontalAlignment Alignment
@@ -180,6 +207,11 @@ public partial class Text
 	public static Text Parse(string richText, TextStyle style)
 	{
 		ArgumentNullException.ThrowIfNull(richText, nameof(richText));
+
+		if (richText.Length == 0)
+		{
+			return new Text([], style);
+		}
 
 		var document = new Document(richText);
 		var builder = new TextBuilder();
@@ -235,6 +267,8 @@ public partial class Text
 		};
 
 		shaper.Shape();
+
+		ContentSize = CalculateContentSize();
 	}
 
 	private void Invalidate()
@@ -247,6 +281,8 @@ public partial class Text
 		_styleMap.Clear();
 		HasEffects = false;
 
+		// The base style is fully resolved here, because an exception is thrown at soon as the config file is loaded
+		// the first time if it isn't.
 		var baseStyle = TextConfig.DefaultStyle.CreateFrom(Style);
 
 		_fallbackFont = baseStyle.Font!.GetVariant(baseStyle.FontStyle!.Value);
@@ -296,5 +332,28 @@ public partial class Text
 				HasEffects = true;
 			}
 		}
+	}
+
+	private Vector2 CalculateContentSize()
+	{
+		var size = Vector2.Zero;
+		var lines = Lines;
+
+		if (lines.Length > 0)
+		{
+			foreach (ref readonly var line in lines)
+			{
+				if (line.Width > size.X)
+				{
+					size.X = line.Width;
+				}
+
+				size.Y += line.Height;
+			}
+
+			size.Y -= lines[^1].Leading;
+		}
+
+		return size;
 	}
 }
