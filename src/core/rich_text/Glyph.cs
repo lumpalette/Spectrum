@@ -79,7 +79,7 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 	/// <value>
 	///   <see langword="true"/> if the glyph represents a character; <see langword="false"/> if it represents an icon.
 	/// </value>
-	public bool IsChar => Index != 0;
+	public bool IsChar => Font.IsValid;
 
 	internal static Glyph CreateChar(Dictionary gl, GlyphStyle style)
 	{

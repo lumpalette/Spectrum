@@ -5,30 +5,55 @@ namespace Espejismo.Core.RichText;
 /// <summary>
 ///   Provides mutable access to specific properties of a <see cref="RichText.Glyph"/> for applying text effects.
 /// </summary>
-public struct GlyphTransform
+public ref struct GlyphTransform
 {
-	/// <summary>
-	///   Gets the number of seconds since the text started rendering.
-	/// </summary>
-	public required double ElapsedTime { get; init; }
+	private readonly ref readonly Glyph _glyph;
 
 	/// <summary>
-	///   Gets the normalized position of the glyph within the source line.
+	///   Initializes a new instance of the <see cref="GlyphTransform"/> struct.
 	/// </summary>
-	/// <value>
-	///   A floating-point number in the range [0,1].
-	/// </value>
-	public required float LinePosition { get; init; }
-
-	/// <summary>
-	///   Gets the number of glyphs in the source line.
-	/// </summary>
-	public required int LineLength { get; init; }
+	/// <param name="glyph">
+	///   The glyph being transformed.
+	/// </param>
+	/// <param name="elapsedTime">
+	///   Time elapsed since the glyph rendering started.
+	/// </param>
+	/// <param name="linePosition">
+	///   The position of the glyph relative to the source line.
+	/// </param>
+	/// <param name="lineLength">i
+	///   The number of glyphs in the source line.
+	/// </param>
+	public GlyphTransform(in Glyph glyph, double elapsedTime, int linePosition, int lineLength)
+	{
+		_glyph = ref glyph;
+		ElapsedTime = elapsedTime;
+		LinePosition = linePosition;
+		LineLength = lineLength;
+	}
 
 	/// <summary>
 	///   Gets the glyph to which the transformation is applied.
 	/// </summary>
-	public required Glyph Glyph { get; init; }
+	public readonly ref readonly Glyph Glyph => ref _glyph;
+
+	/// <summary>
+	///   Gets the number of seconds since the text started rendering.
+	/// </summary>
+	public readonly double ElapsedTime { get; }
+
+	/// <summary>
+	///   Gets the index of the glyph within the source line.
+	/// </summary>
+	/// <value>
+	///   A 32-bit signed integer in the range [0,<see cref="LineLength"/>].
+	/// </value>
+	public readonly int LinePosition { get; }
+
+	/// <summary>
+	///   Gets the number of glyphs in the source line.
+	/// </summary>
+	public readonly int LineLength { get; }
 
 	/// <summary>
 	///   Gets or sets the glyph index, specific to <see cref="Glyph.Font"/>.

@@ -25,7 +25,7 @@ public sealed partial class GradientEffect : TextEffect
 	[Export]
 	private Gradient? _gradient;
 	[Export]
-	private float _frequency = 0.2f;
+	private float _frequency = 0.05f;
 	[Export]
 	private float _speed = 0.4f;
 

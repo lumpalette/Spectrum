@@ -2,6 +2,7 @@ using Godot;
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace Espejismo.Core.RichText;
 
@@ -9,37 +10,62 @@ namespace Espejismo.Core.RichText;
 ///   Represents a single laid-out line of text, defined as a slice of <see cref="Glyph"/> instances from a source
 ///   <see cref="Text"/>.
 /// </summary>
-public readonly struct LineSpan : IEnumerable<Glyph>
+public readonly struct LineSpan
 {
+	private readonly List<Glyph> _glyphs;
+
+	internal LineSpan(
+		List<Glyph> glyphs,
+		int start,
+		int length,
+		float width,
+		float ascent,
+		float descent,
+		float leading,
+		HorizontalAlignment alignment)
+	{
+		_glyphs = glyphs;
+
+		Start = start;
+		Length = length;
+
+		Width = width;
+		Ascent = ascent;
+		Descent = descent;
+		Leading = leading;
+
+		Alignment = alignment;
+	}
+
 	/// <summary>
 	///   Gets the index of the first glyph on the line within the source <see cref="Text"/>.
 	/// </summary>
-	public int Start { get; internal init; }
+	public int Start { get; }
 
 	/// <summary>
 	///   Gets the number of glyphs in the line.
 	/// </summary>
-	public int Length { get; internal init; }
+	public int Length { get; }
 
 	/// <summary>
 	///   Gets the total extent of the line, in pixels.
 	/// </summary>
-	public float Width { get; internal init; }
+	public float Width { get; }
 
 	/// <summary>
 	///   Gets the distance from the baseline to the top of the line, in pixels.
 	/// </summary>
-	public float Ascent { get; internal init; }
+	public float Ascent { get; }
 
 	/// <summary>
 	///   Gets the distance from the baseline to the bottom of the line, in pixels.
 	/// </summary>
-	public float Descent { get; internal init; }
+	public float Descent { get; }
 
 	/// <summary>
 	///   Gets the extra vertical added between lines of text, from the bottom of the line.
 	/// </summary>
-	public float Leading { get; internal init; }
+	public float Leading { get; }
 
 	/// <summary>
 	///   Gets the total height of the line, including the line gap, in pixels.
@@ -52,9 +78,7 @@ public readonly struct LineSpan : IEnumerable<Glyph>
 	/// <summary>
 	///   Gets the horizontal alignment applied to the line.
 	/// </summary>
-	public HorizontalAlignment Alignment { get; internal init; }
-
-	internal List<Glyph> Glyphs { get; init; }
+	public HorizontalAlignment Alignment { get; }
 
 	/// <summary>
 	///   Gets the <see cref="Glyph"/> at the specified index.
@@ -68,14 +92,14 @@ public readonly struct LineSpan : IEnumerable<Glyph>
 	/// <exception cref="ArgumentOutOfRangeException">
 	///   Thrown if <paramref name="index"/> is negative or greater than or equal to <see cref="Length"/>.
 	/// </exception>
-	public Glyph this[int index]
+	public ref readonly Glyph this[int index]
 	{
 		get
 		{
 			ArgumentOutOfRangeException.ThrowIfNegative(index, nameof(index));
 			ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, Length, nameof(index));
 
-			return Glyphs[Start + index];
+			return ref CollectionsMarshal.AsSpan(_glyphs)[Start + index];
 		}
 	}
 
@@ -90,63 +114,52 @@ public readonly struct LineSpan : IEnumerable<Glyph>
 		return new Enumerator(this);
 	}
 
-	IEnumerator<Glyph> IEnumerable<Glyph>.GetEnumerator()
-	{
-		return GetEnumerator();
-	}
-
-	IEnumerator IEnumerable.GetEnumerator()
-	{
-		return GetEnumerator();
-	}
-
 	/// <summary>
 	///   Enumerates through the glyphs of a <see cref="LineSpan"/>.
 	/// </summary>
-	public struct Enumerator : IEnumerator<Glyph>
+	public ref struct Enumerator : IEnumerator<Glyph>
 	{
 		private readonly List<Glyph> _list;
 		private readonly int _start;
 		private readonly int _length;
 
-		private int _index;
-		private Glyph _current;
+		private int _index = -1;
 
 		internal Enumerator(LineSpan line)
 		{
-			_list = line.Glyphs;
+			_list = line._glyphs;
 			_start = line.Start;
 			_length = line.Length;
 		}
 
-		/// <inheritdoc/>
-		public readonly Glyph Current => _current;
-
-		/// <inheritdoc/>
-		public readonly void Dispose()
-		{
-		}
+		/// <summary>
+		///   Gets a reference to the glyph at the current position of the enumerator.
+		/// </summary>
+		public readonly ref readonly Glyph Current => ref CollectionsMarshal.AsSpan(_list)[_start + _index];
 
 		/// <inheritdoc/>
 		public bool MoveNext()
 		{
 			if (_index < _length)
 			{
-				_current = _list[_start + _index];
 				_index++;
 				return true;
 			}
 
-			_current = default;
 			return false;
 		}
 
+		readonly Glyph IEnumerator<Glyph>.Current => Current;
+
 		readonly object IEnumerator.Current => Current;
+
+		void IDisposable.Dispose()
+		{
+		}
 
 		void IEnumerator.Reset()
 		{
-			_current = default;
-			_index = 0;
+			_index = -1;
 		}
 	}
 }

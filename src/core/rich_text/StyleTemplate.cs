@@ -52,7 +52,7 @@ public partial class StyleTemplate : TextResource
 	/// <summary>
 	///   Gets the size of the text, in pixels. Defaults to 8px.
 	/// </summary>
-	[Export]
+	[Export(PropertyHint.Range, "1,512,suffix:px")]
 	public ushort FontSize
 	{
 		get;

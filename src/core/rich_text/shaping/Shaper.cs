@@ -188,17 +188,15 @@ internal readonly struct Shaper()
 			leading = previousLine.Leading;
 		}
 
-		Lines.Add(new LineSpan
-		{
-			Glyphs = Glyphs,
-			Start = Glyphs.Count,
-			Length = 0,
-			Width = 0f,
-			Ascent = ascent,
-			Descent = descent,
-			Leading = leading,
-			Alignment = alignment
-		});
+		Lines.Add(new LineSpan(
+			glyphs: Glyphs,
+			start: Glyphs.Count,
+			length: 0,
+			width: 0f,
+			ascent,
+			descent,
+			leading,
+			alignment));
 	}
 
 	private void InsertLine(Paragraph paragraph, int start, int length)
@@ -217,17 +215,15 @@ internal readonly struct Shaper()
 			}
 		}
 
-		Lines.Add(new LineSpan
-		{
-			Glyphs = Glyphs,
-			Start = initialGlyphCount,
-			Length = Glyphs.Count - initialGlyphCount,
-			Width = (float)TS.ShapedTextGetWidth(lineShaped),
-			Ascent = (float)TS.ShapedTextGetAscent(lineShaped),
-			Descent = (float)TS.ShapedTextGetDescent(lineShaped),
-			Leading = maxLeading,
-			Alignment = paragraph.Alignment
-		});
+		Lines.Add(new LineSpan(
+			glyphs: Glyphs,
+			start: initialGlyphCount,
+			length: Glyphs.Count - initialGlyphCount,
+			width: (float)TS.ShapedTextGetWidth(lineShaped),
+			ascent: (float)TS.ShapedTextGetAscent(lineShaped),
+			descent: (float)TS.ShapedTextGetDescent(lineShaped),
+			maxLeading,
+			paragraph.Alignment));
 
 		TS.FreeRid(lineShaped);
 	}

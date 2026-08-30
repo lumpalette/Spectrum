@@ -100,7 +100,6 @@ metadata/_custom_type_script = "uid://cjwm1veyo2eva"
 
 [sub_resource type="Resource" id="Resource_5imrv"]
 script = ExtResource("18_wre4d")
-_radius = 4.0
 metadata/_custom_type_script = "uid://cltvb5woimgqd"
 
 [sub_resource type="Resource" id="Resource_22ly1"]
