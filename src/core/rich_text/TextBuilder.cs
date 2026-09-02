@@ -188,7 +188,7 @@ public class TextBuilder
 			}
 		}
 
-		_items.Add(ShapeItem.CreateRun(text, TopStyle));
+		_items.Add(new(new ItemRun(text, TopStyle)));
 		return this;
 	}
 
@@ -232,7 +232,7 @@ public class TextBuilder
 			_remainingChars--;
 		}
 
-		_items.Add(ShapeItem.CreateTexture(texture, alignment, size, TopStyle));
+		_items.Add(new(new ItemIcon(texture, alignment, size, TopStyle)));
 		return this;
 	}
 
@@ -255,7 +255,7 @@ public class TextBuilder
 	{
 		ArgumentNullException.ThrowIfNull(name, nameof(name));
 
-		_items.Add(ShapeItem.CreateMarker(name, attributes.ToArray()));
+		_items.Add(new(new ItemMarker(name, attributes.ToArray())));
 		return this;
 	}
 
@@ -267,7 +267,7 @@ public class TextBuilder
 	/// </returns>
 	public TextBuilder AppendBreak()
 	{
-		_items.Add(ShapeItem.CreateBreak());
+		_items.Add(new(new ItemBreak()));
 		return this;
 	}
 
@@ -284,7 +284,7 @@ public class TextBuilder
 	public TextBuilder PushAlignment(HorizontalAlignment alignment)
 	{
 		_alignmentStack.Push(alignment);
-		_items.Add(ShapeItem.CreateAlign(alignment));
+		_items.Add(new(new ItemAlign(alignment)));
 		return this;
 	}
 
@@ -298,7 +298,7 @@ public class TextBuilder
 	{
 		if (_alignmentStack.TryPop(out _))
 		{
-			_items.Add(ShapeItem.CreateAlign(TopAlignment));
+			_items.Add(new(new ItemAlign(TopAlignment)));
 		}
 
 		return this;

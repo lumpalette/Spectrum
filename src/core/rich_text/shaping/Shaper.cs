@@ -72,15 +72,15 @@ internal readonly struct Shaper()
 			switch (item.Type)
 			{
 				case ShapeItemType.Run:
-					var resolved = StyleMap[item.Style];
+					var resolved = StyleMap[item.Run!.Value.Style];
 					var fonts = resolved.Font.GetRids();
 					var fontSize = resolved.FontSize;
 
-					TS.ShapedTextAddString(paragraph.Shaped, item.Text, fonts, fontSize, meta: i);
+					TS.ShapedTextAddString(paragraph.Shaped, item.Run!.Value.Text, fonts, fontSize, meta: i);
 					break;
 
-				case ShapeItemType.Texture:
-					TS.ShapedTextAddObject(paragraph.Shaped, i, item.TextureSize, item.TextureAlignment);
+				case ShapeItemType.Icon:
+					TS.ShapedTextAddObject(paragraph.Shaped, i, item.Icon!.Value.Size, item.Icon!.Value.Alignment);
 					break;
 
 				case ShapeItemType.Marker:
@@ -98,7 +98,7 @@ internal readonly struct Shaper()
 					break;
 
 				case ShapeItemType.Align:
-					var alignment = item.Alignment ?? BaseAlignment;
+					var alignment = item.Align!.Value.Alignment ?? BaseAlignment;
 
 					if (paragraph.HasContent)
 					{
@@ -114,7 +114,7 @@ internal readonly struct Shaper()
 					break;
 			}
 
-			if (item.Type is ShapeItemType.Run or ShapeItemType.Texture or ShapeItemType.Marker)
+			if (item.Type is ShapeItemType.Run or ShapeItemType.Icon or ShapeItemType.Marker)
 			{
 				paragraph = paragraph with { HasContent = true };
 				independent = true;
@@ -255,18 +255,18 @@ internal readonly struct Shaper()
 			case ShapeItemType.Run:
 				return AppendChar(gl, item);
 
-			case ShapeItemType.Texture:
+			case ShapeItemType.Icon:
 				return AppendIcon(gl, item, itemIndex, lineShaped);
 
 			default:
-				Markers.Add(new TextMarker(item.Text, item.Attributes, Glyphs.Count));
+				Markers.Add(new TextMarker(item.Marker!.Value.Name, item.Marker!.Value.Attributes, Glyphs.Count));
 				return 0f;
 		}
 	}
 
 	private float AppendChar(Godot.Collections.Dictionary gl, in ShapeItem item)
 	{
-		var resolved = StyleMap[item.Style];
+		var resolved = StyleMap[item.Run!.Value.Style];
 		var glyph = Glyph.CreateChar(gl, resolved.Style);
 
 		Glyphs.Add(glyph);
@@ -283,8 +283,8 @@ internal readonly struct Shaper()
 			Y = (Orientation == TextServer.Orientation.Vertical) ? 0f : rect.Position.Y
 		};
 
-		var resolved = StyleMap[item.Style];
-		var glyph = Glyph.CreateIcon(gl, resolved.Style, item.Texture, rect);
+		var resolved = StyleMap[item.Icon!.Value.Style];
+		var glyph = Glyph.CreateIcon(gl, resolved.Style, item.Icon!.Value.Texture, rect);
 
 		Glyphs.Add(glyph);
 

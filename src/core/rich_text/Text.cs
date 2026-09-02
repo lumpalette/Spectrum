@@ -315,7 +315,7 @@ public partial class Text
 
 		foreach (var item in _items)
 		{
-			if (item.Type is not (ShapeItemType.Run or ShapeItemType.Texture) || _styleMap.ContainsKey(item.Style))
+			if (item.Type is not (ShapeItemType.Run or ShapeItemType.Icon) || _styleMap.ContainsKey(item.Style))
 			{
 				continue;
 			}

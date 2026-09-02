@@ -2,55 +2,40 @@ using Godot;
 
 namespace Espejismo.Core.RichText.Shaping;
 
+internal readonly record struct ItemRun(string Text, TextStyle Style);
+
+internal readonly record struct ItemIcon(Texture2D Texture, InlineAlignment Alignment, Vector2 Size, TextStyle Style);
+
+internal readonly record struct ItemMarker(string Name, TagAttribute[] Attributes);
+
+internal readonly record struct ItemBreak;
+
+internal readonly record struct ItemAlign(HorizontalAlignment? Alignment);
+
 // Union-like struct that holds every type of data associated to a shape item used by the shaping engine.
 internal readonly struct ShapeItem
 {
-	public static ShapeItem CreateRun(string text, in TextStyle style)
-	{
-		return new ShapeItem { Type = ShapeItemType.Run, Text = text, Style = style };
-	}
+	private ShapeItem(ShapeItemType type) => Type = type;
 
-	public static ShapeItem CreateTexture(Texture2D tex, InlineAlignment alignment, Vector2 size, TextStyle style)
-	{
-		return new ShapeItem
-		{
-			Type = ShapeItemType.Texture,
-			Texture = tex,
-			TextureAlignment = alignment,
-			TextureSize = size,
-			Style = style
-		};
-	}
+	public ShapeItem(ItemRun run) : this(ShapeItemType.Run) => Run = run;
 
-	public static ShapeItem CreateMarker(string name, TagAttribute[] attributes)
-	{
-		return new ShapeItem { Type = ShapeItemType.Marker, Text = name, Attributes = attributes };
-	}
+	public ShapeItem(ItemIcon icon) : this(ShapeItemType.Icon) => Icon = icon;
 
-	public static ShapeItem CreateBreak()
-	{
-		return new ShapeItem { Type = ShapeItemType.Break };
-	}
+	public ShapeItem(ItemMarker marker) : this(ShapeItemType.Marker) => Marker = marker;
 
-	public static ShapeItem CreateAlign(HorizontalAlignment? alignment)
-	{
-		return new ShapeItem { Type = ShapeItemType.Align, Alignment = alignment };
-	}
+	public ShapeItem(ItemBreak br) : this(ShapeItemType.Break) => Break = br;
 
-	public ShapeItemType Type { get; private init; }
+	public ShapeItem(ItemAlign align) : this(ShapeItemType.Align) => Align = align;
 
-	// For runs, represents the text of the run; for markers, represents the name of the marker.
-	public string Text { get; private init; }
+	public ShapeItemType Type { get; }
 
-	public TextStyle Style { get; private init; }
+	public ItemRun? Run { get; }
 
-	public Texture2D Texture { get; private init; }
+	public ItemIcon? Icon { get; }
 
-	public InlineAlignment TextureAlignment { get; private init; }
+	public ItemMarker? Marker { get; }
 
-	public Vector2 TextureSize { get; private init; }
+	public ItemBreak? Break { get; }
 
-	public TagAttribute[] Attributes { get; private init; }
-
-	public HorizontalAlignment? Alignment { get; private init; }
+	public ItemAlign? Align { get; }
 }

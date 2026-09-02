@@ -1,15 +1,3 @@
 [gd_scene format=3 uid="uid://b33c8l4fw10vj"]
 
-[ext_resource type="Script" uid="uid://c43ggny6ffklj" path="res://src/ui/TextRenderer.cs" id="1_eewff"]
-
 [node name="Main" type="Node" unique_id=213237798]
-
-[node name="TextRenderer" type="Control" parent="." unique_id=624180644]
-layout_mode = 3
-anchors_preset = 0
-offset_left = 12.0
-offset_top = 57.0
-offset_right = 202.0
-offset_bottom = 169.0
-script = ExtResource("1_eewff")
-metadata/_custom_type_script = "uid://c43ggny6ffklj"

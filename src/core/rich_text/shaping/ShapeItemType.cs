@@ -3,7 +3,7 @@ namespace Espejismo.Core.RichText.Shaping;
 internal enum ShapeItemType
 {
 	Run,
-	Texture,
+	Icon,
 	Marker,
 	Break,
 	Align
