@@ -43,14 +43,16 @@ public partial class TextRenderer : Control
 		get;
 		set
 		{
-			if (field != value)
+			if (field == value)
 			{
-				field?.Changed -= OnStylePropertyChanged;
-				field = value;
-				field?.Changed += OnStylePropertyChanged;
-
-				UpdateShaped(parse: false);
+				return;
 			}
+
+			field?.Changed -= OnStylePropertyChanged;
+			field = value;
+			field?.Changed += OnStylePropertyChanged;
+
+			UpdateShaped(parse: false);
 		}
 	}
 
@@ -71,7 +73,7 @@ public partial class TextRenderer : Control
 			}
 		}
 	}
-	
+
 	/// <summary>
 	///   Gets or sets the vertical alignment of the text, relative to the control's container.
 	/// </summary>
@@ -91,6 +93,76 @@ public partial class TextRenderer : Control
 	}
 
 	/// <summary>
+	///   Gets or sets the number of characters to render. If set to -1, all characters are rendered.
+	/// </summary>
+	/// <value>
+	///   A 32-bit signed integer in the range [-1,128000].
+	/// </value>
+	[ExportGroup("Displayed text")]
+	[Export(PropertyHint.Range, "-1,128000,suffix:chrs")]
+	public int VisibleCharacters
+	{
+		get;
+		set
+		{
+			if (value < -1)
+			{
+				value = -1;
+			}
+
+			// Apparently, 128,000 is the maximum number of chars allowed in one shaped text.
+			if (value > 128_000)
+			{
+				value = 128_000;
+			}
+
+			if (field == value)
+			{
+				return;
+			}
+
+			field = value;
+
+			if (TrimBeforeShaping)
+			{
+				UpdateShaped(parse: true);
+			}
+			else
+			{
+				QueueRedraw();
+			}
+		}
+	} = -1;
+
+	/// <summary>
+	///   Gets a value indicating whether trimmed characters from the <see cref="VisibleCharacters"/> cutoff should be
+	///   excluded or included in the shaping process.
+	/// </summary>
+	/// <value>
+	///   <see langword="true"/> if trimmed characters should be excluded from shaping; <see langword="false"/> if they
+	///   should be included.
+	/// </value>
+	[Export]
+	public bool TrimBeforeShaping
+	{
+		get;
+		set
+		{
+			if (field == value)
+			{
+				return;
+			}
+
+			field = value;
+
+			if (VisibleCharacters != -1)
+			{
+				UpdateShaped(parse: true);
+			}
+		}
+	}
+
+	/// <summary>
 	///   Gets the <see cref="TextMarker"/> instances embedded into the text.
 	/// </summary>
 	public ReadOnlySpan<TextMarker> Markers
@@ -101,7 +173,7 @@ public partial class TextRenderer : Control
 			{
 				UpdateShaped(parse: true);
 			}
-			
+
 			return _shaped!.Markers;
 		}
 	}
@@ -129,32 +201,47 @@ public partial class TextRenderer : Control
 	/// <inheritdoc/>
 	public override void _Draw()
 	{
-		if (_shaped is null)
+		if (_shaped is null or { Length: 0 })
 		{
 			return;
 		}
 
-		GetStartY(out var startY, out var lineGap);
-
 		var canvas = GetCanvasItem();
-		var position = new Vector2(0f, startY);
-		var lines = _shaped.Lines;
+		var position = new Vector2 { Y = GetVerticalOffset(out var lineGap) };
 
-		for (var i = 0; i < lines.Length; i++)
+		var charactersDrawn = 0;
+		var clusterVisible = true;
+
+		foreach (ref readonly var line in _shaped.Lines)
 		{
-			ref readonly var line = ref lines[i];
-
+			// TextServer.font_draw_glyph() starts drawing from the baseline, so we have to account for that.
 			position.X = GetLineOffset(line);
 			position.Y += line.Ascent;
 
-			if (i > 0)
+			for (var i = 0; i < line.Length; i++)
 			{
-				position.Y += lineGap;
+				ref readonly var g = ref _shaped.Glyphs[line.Start + i];
+
+				if (g.Count > 0)
+				{
+					clusterVisible = VisibleCharacters == -1 || charactersDrawn < VisibleCharacters;
+					charactersDrawn++;
+				}
+
+				if (clusterVisible)
+				{
+					var visibility = RenderGlyph(g, canvas, position, i, line.Length);
+
+					if (visibility == GlyphVisibility.Omitted)
+					{
+						continue;
+					}
+				}
+
+				position.X += g.Advance * g.Repeat;
 			}
 
-			RenderLine(line, canvas, position);
-
-			position.Y += line.Descent + line.Leading;
+			position.Y += line.Descent + line.Leading + lineGap;
 		}
 	}
 
@@ -165,22 +252,8 @@ public partial class TextRenderer : Control
 		{
 			UpdateShaped(parse: false);
 		}
-	}
 
-	private void UpdateShaped(bool parse)
-	{
-		var style = GetStyle();
-
-		if (parse || _shaped is null)
-		{
-			_shaped = Core.RichText.Text.Parse(Text, style);
-		}
-
-		_shaped.Style = style;
-		_shaped.Width = Size.X;
-		_shaped.Alignment = HorizontalAlignment;
-
-		QueueRedraw();
+		base._Notification(what);
 	}
 
 	private TextStyle GetStyle()
@@ -205,28 +278,59 @@ public partial class TextRenderer : Control
 		return StyleTemplate.Create();
 	}
 
-	private void RenderLine(in LineSpan line, Rid canvas, Vector2 position)
+	private void UpdateShaped(bool parse)
+	{
+		var style = GetStyle();
+
+		if (parse || _shaped is null)
+		{
+			_shaped = Core.RichText.Text.Parse(Text, style, TrimBeforeShaping ? VisibleCharacters : -1);
+		}
+
+		_shaped.Style = style;
+		_shaped.Width = Size.X;
+		_shaped.Alignment = HorizontalAlignment;
+		
+		QueueRedraw();
+	}
+
+	private float GetVerticalOffset(out float lineGap)
+	{
+		lineGap = 0f;
+
+		var contentHeight = _shaped!.ContentSize.Y;
+		var numberOfLines = _shaped!.Lines.Length;
+
+		switch (VerticalAlignment)
+		{
+			case VerticalAlignment.Center:
+				return (Size.Y - contentHeight) / 2f;
+			case VerticalAlignment.Bottom:
+				return Size.Y - contentHeight;
+			case VerticalAlignment.Fill:
+				if (numberOfLines > 0)
+				{
+					lineGap = Math.Max(0f, Size.Y - contentHeight) / (numberOfLines - 1);
+				}
+				return 0f;
+		}
+
+		return 0f;
+	}
+
+	private float GetLineOffset(in LineLayout line)
 	{
 		if (line.Alignment == HorizontalAlignment.Center)
 		{
-			position.X -= line.Width / 2f;
+			return (Size.X - line.Width) / 2f;
 		}
-		else if (line.Alignment == HorizontalAlignment.Right)
+ 
+		if (line.Alignment == HorizontalAlignment.Right)
 		{
-			position.X -= line.Width;
+			return Size.X - line.Width;
 		}
-		
-		position.X = MathF.Round(position.X);
-		
-		for (var i = 0; i < line.Length; i++)
-		{
-			ref readonly var g = ref line[i];
-
-			if (RenderGlyph(g, canvas, position, i, line.Length) != GlyphVisibility.Omitted)
-			{
-				position.X += g.Advance * g.Repeat;
-			}
-		}
+ 
+		return 0f;
 	}
 
 	private GlyphVisibility RenderGlyph(in Glyph g, Rid canvas, Vector2 position, int linePosition, int lineLength)
@@ -265,9 +369,21 @@ public partial class TextRenderer : Control
 
 		for (var i = 0; i < g.Repeat; i++)
 		{
-			// Draw regular character.
-			if (g.IsChar)
+			var flags = (TextServer.GraphemeFlag)g.Flags;
+
+			if (flags.HasFlag(TextServer.GraphemeFlag.EmbeddedObject))
 			{
+				// Text icon.
+				DrawTextureRect(g.IconTexture, new Rect2(position, g.IconSize), tile: false, color);
+			}
+			else if (!flags.HasFlag(TextServer.GraphemeFlag.Valid))
+			{
+				// Invalid glyph (missing from every fallback font).
+				_TS.DrawHexCodeBox(canvas, g.FontSize, position, index, color);
+			}
+			else if (!flags.HasFlag(TextServer.GraphemeFlag.Space))
+			{
+				// Non-whitespace character.
 				if (g.Style.ShadowSize > 0 && sColor.A > 0f)
 				{
 					_TS.FontDrawGlyph(g.Font, canvas, g.FontSize, position + g.Style.ShadowOffset, index, sColor);
@@ -279,68 +395,12 @@ public partial class TextRenderer : Control
 				}
 
 				_TS.FontDrawGlyph(g.Font, canvas, g.FontSize, position, index, color);
-				continue;
 			}
-			
-			// Draw static icon.
-			if (g.IconTexture is not null)
-			{
-				DrawTextureRect(g.IconTexture, new Rect2(position, g.IconSize), tile: false, color);
-				continue;
-			}
-			
-			// Draw invalid glyph in a meaningful way.
-			_TS.DrawHexCodeBox(canvas, g.FontSize, position, index, color);
 
 			position.X += g.Advance;
 		}
 
 		return GlyphVisibility.Visible;
-	}
-
-	private void GetStartY(out float startY, out float lineGap)
-	{
-		startY = 0f;
-		lineGap = 0f;
-
-		if (_shaped is null)
-		{
-			return;
-		}
-
-		var contentSize = _shaped.ContentSize;
-		var numberOfLines = _shaped.Lines.Length;
-
-		switch (VerticalAlignment)
-		{
-			case VerticalAlignment.Center:
-				startY = (Size.Y - contentSize.Y) / 2f;
-				break;
-			case VerticalAlignment.Bottom:
-				startY = Size.Y - contentSize.Y;
-				break;
-			case VerticalAlignment.Fill:
-				if (numberOfLines > 1)
-				{
-					lineGap = (Size.Y - contentSize.Y) / (numberOfLines - 1f);
-				}
-				break;
-		}
-	}
-
-	private float GetLineOffset(in LineSpan line)
-	{
-		if (line.Alignment == HorizontalAlignment.Center)
-		{
-			return Size.X / 2f;
-		}
-
-		if (line.Alignment == HorizontalAlignment.Right)
-		{
-			return Size.X;
-		}
-
-		return 0f;
 	}
 
 	private void OnStylePropertyChanged()

@@ -2,6 +2,7 @@ using Espejismo.Core.RichText.Shaping;
 using Godot;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace Espejismo.Core.RichText;
 
@@ -43,12 +44,42 @@ namespace Espejismo.Core.RichText;
 ///   The class also maintains a stack of styles overrides and alignments, which you can modify using the
 ///   <c>Push/Pop*</c> methods, which allows complex nesting if required.
 /// </para>
+/// <para>
+///   At construction, you can specify the maximum number of characters and/or icons that can be appended to the
+///   builder. This mechanism can be used to perform typewritter effects naturally before shaping.
+/// </para>
 /// </remarks>
 public class TextBuilder
 {
 	private readonly List<ShapeItem> _items = [];
 	private readonly Stack<TextStyle> _styleStack = [];
 	private readonly Stack<HorizontalAlignment> _alignmentStack = [];
+
+	private int _remainingChars;
+
+	/// <summary>
+	///   Initializes a new instance of the <see cref="TextBuilder"/> class.
+	/// </summary>
+	public TextBuilder()
+	{
+		_remainingChars = -1;
+	}
+
+	/// <summary>
+	///   Initializes a new instance of the <see cref="TextBuilder"/> class by specifying a limit on how many
+	///   characters or icons can be appended.
+	/// </summary>
+	/// <param name="visibleChars">
+	///   The number of individual glyphs that can be appended. If set to -1, no limit is applied.
+	/// </param>
+	/// <exception cref="ArgumentOutOfRangeException">
+	///   Thrown if <paramref name="visibleChars"/> is less than -1.
+	/// </exception>
+	public TextBuilder(int visibleChars)
+	{
+		ArgumentOutOfRangeException.ThrowIfLessThan(visibleChars, -1);
+		_remainingChars = visibleChars;
+	}
 
 	/// <summary>
 	///   Gets the style override currently at the top of the style stack.
@@ -84,6 +115,12 @@ public class TextBuilder
 			return result;
 		}
 	}
+
+	/// <summary>
+	///   Gets a value indicating whether the character append limit has been reached. Once it is reached, further calls
+	///   to <see cref="AppendText"/> or <see cref="AppendIcon"/> are ignored.
+	/// </summary>
+	public bool IsExhausted => _remainingChars == 0;
 
 	/// <summary>
 	///   Inserts the specified <see cref="TextStyle"/> override at the top of the style stack.
@@ -136,9 +173,19 @@ public class TextBuilder
 	{
 		ArgumentNullException.ThrowIfNull(text, nameof(text));
 
-		if (text.Length == 0)
+		if (text.Length == 0 || IsExhausted)
 		{
 			return this;
+		}
+
+		if (_remainingChars != -1)
+		{
+			text = TakeFromRemaining(text);
+
+			if (text.Length == 0)
+			{
+				return this;
+			}
 		}
 
 		_items.Add(ShapeItem.CreateRun(text, TopStyle));
@@ -169,10 +216,20 @@ public class TextBuilder
 	public TextBuilder AppendIcon(Texture2D texture, InlineAlignment alignment, Vector2 size)
 	{
 		ArgumentNullException.ThrowIfNull(texture, nameof(texture));
-		
+
 		if (size.X < 0 || size.Y < 0)
 		{
-			throw new ArgumentException($"Icon size {size} cannot be negative");
+			throw new ArgumentException($"Icon size ({size}) cannot be negative");
+		}
+
+		if (IsExhausted)
+		{
+			return this;
+		}
+
+		if (_remainingChars != -1)
+		{
+			_remainingChars--;
 		}
 
 		_items.Add(ShapeItem.CreateTexture(texture, alignment, size, TopStyle));
@@ -269,5 +326,23 @@ public class TextBuilder
 		_items.Clear();
 		_styleStack.Clear();
 		_alignmentStack.Clear();
+	}
+
+	private string TakeFromRemaining(string text)
+	{
+		var TEE = StringInfo.GetTextElementEnumerator(text);
+
+		while (TEE.MoveNext())
+		{
+			if (_remainingChars <= 0)
+			{
+				_remainingChars = 0;
+				return text[..TEE.ElementIndex];
+			}
+
+			_remainingChars--;
+		}
+
+		return text;
 	}
 }

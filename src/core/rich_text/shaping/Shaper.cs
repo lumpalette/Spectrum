@@ -30,7 +30,7 @@ internal readonly struct Shaper()
 
 	// Output, the lists must be cleared by caller.
 	public required List<Glyph> Glyphs { get; init; }
-	public required List<LineSpan> Lines { get; init; }
+	public required List<LineLayout> Lines { get; init; }
 	public required List<TextMarker> Markers { get; init; }
 	public required List<Paragraph> Paragraphs { get; init; }
 
@@ -188,8 +188,7 @@ internal readonly struct Shaper()
 			leading = previousLine.Leading;
 		}
 
-		Lines.Add(new LineSpan(
-			glyphs: Glyphs,
+		Lines.Add(new LineLayout(
 			start: Glyphs.Count,
 			length: 0,
 			width: 0f,
@@ -215,8 +214,7 @@ internal readonly struct Shaper()
 			}
 		}
 
-		Lines.Add(new LineSpan(
-			glyphs: Glyphs,
+		Lines.Add(new LineLayout(
 			start: initialGlyphCount,
 			length: Glyphs.Count - initialGlyphCount,
 			width: (float)TS.ShapedTextGetWidth(lineShaped),

@@ -15,7 +15,7 @@ public partial class Text
 	private readonly TextServer _TS = TextServerManager.GetPrimaryInterface();
 	private readonly Dictionary<TextStyle, ResolvedStyle> _styleMap = [];
 	private readonly List<Glyph> _glyphs = [];
-	private readonly List<LineSpan> _lines = [];
+	private readonly List<LineLayout> _lines = [];
 	private readonly List<TextMarker> _markers = [];
 	private readonly List<Paragraph> _paragraphs = [];
 
@@ -75,12 +75,17 @@ public partial class Text
 	}
 
 	/// <summary>
-	///   Gets the shaped <see cref="LineSpan"/> instances, in visual order (top-to-bottom).
+	///   Gets the layout of each shaped line, in visual order (top-to-bottom).
 	/// </summary>
 	/// <remarks>
+	/// <para>
+	///   You can use this property along with <see cref="Glyphs"/> to access the glyphs from a specific line of text.
+	/// </para>
+	/// <para>
 	///   A text reshape is triggered when accessing this property and <see cref="IsDirty"/> is <see langword="true"/>.
+	/// </para>
 	/// </remarks>
-	public ReadOnlySpan<LineSpan> Lines
+	public ReadOnlySpan<LineLayout> Lines
 	{
 		get
 		{
@@ -168,9 +173,27 @@ public partial class Text
 		get
 		{
 			Shape();
-			return field;
+			
+			var size = Vector2.Zero;
+			var lines = Lines;
+
+			if (lines.Length > 0)
+			{
+				foreach (ref readonly var line in lines)
+				{
+					if (line.Width > size.X)
+					{
+						size.X = line.Width;
+					}
+
+					size.Y += line.Height;
+				}
+
+				size.Y -= lines[^1].Leading;
+			}
+
+			return size;
 		}
-		private set;
 	}
 
 	/// <summary>
@@ -198,23 +221,26 @@ public partial class Text
 	/// <param name="style">
 	///   The style to apply to the resulting text.
 	/// </param>
+	/// <param name="visibleChars">
+	///   The maximum number of glyphs to generate. If set to -1, no limit is applied.
+	/// </param>
 	/// <returns>
 	///   The <see cref="Text"/> representation of <paramref name="richText"/>. 
 	/// </returns>
 	/// <exception cref="ArgumentNullException">
 	///   Thrown if <paramref name="richText"/> is <see langword="null"/>.
 	/// </exception>
-	public static Text Parse(string richText, TextStyle style)
+	public static Text Parse(string richText, TextStyle style, int visibleChars = -1)
 	{
 		ArgumentNullException.ThrowIfNull(richText, nameof(richText));
 
-		if (richText.Length == 0)
+		if (richText.Length == 0 || visibleChars == 0)
 		{
 			return new Text([], style);
 		}
 
 		var document = new Document(richText);
-		var builder = new TextBuilder();
+		var builder = new TextBuilder(visibleChars);
 
 		// Looks cursed somehow, but whatever, it works.
 		new Synthesizer(document, builder).Read();
@@ -267,8 +293,6 @@ public partial class Text
 		};
 
 		shaper.Shape();
-
-		ContentSize = CalculateContentSize();
 	}
 
 	private void Invalidate()
@@ -332,28 +356,5 @@ public partial class Text
 				HasEffects = true;
 			}
 		}
-	}
-
-	private Vector2 CalculateContentSize()
-	{
-		var size = Vector2.Zero;
-		var lines = Lines;
-
-		if (lines.Length > 0)
-		{
-			foreach (ref readonly var line in lines)
-			{
-				if (line.Width > size.X)
-				{
-					size.X = line.Width;
-				}
-
-				size.Y += line.Height;
-			}
-
-			size.Y -= lines[^1].Leading;
-		}
-
-		return size;
 	}
 }

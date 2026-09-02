@@ -24,7 +24,7 @@ internal struct Synthesizer(Document document, TextBuilder builder)
 		var entityBuffer = (stackalloc char[2]);
 		var childIndex = document.Nodes[rootIndex].ChildIndex;
 
-		while (childIndex != -1)
+		while (childIndex != -1 && !builder.IsExhausted)
 		{
 			var child = document.Nodes[childIndex];
 

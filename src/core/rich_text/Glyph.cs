@@ -73,14 +73,6 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 	/// </summary>
 	public GlyphStyle Style { get; private init; }
 
-	/// <summary>
-	///   Gets a value indicating whether the glyph represents a text character.
-	/// </summary>
-	/// <value>
-	///   <see langword="true"/> if the glyph represents a character; <see langword="false"/> if it represents an icon.
-	/// </value>
-	public bool IsChar => Font.IsValid;
-
 	internal static Glyph CreateChar(Dictionary gl, GlyphStyle style)
 	{
 		return new Glyph
