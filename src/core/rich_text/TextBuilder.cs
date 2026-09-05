@@ -158,7 +158,14 @@ public class TextBuilder
 	///   Appends a run of text using the <see cref="TopStyle"/>.
 	/// </summary>
 	/// <remarks>
-	///   If <paramref name="text"/> is empty, the method call is ignored.
+	/// <para>
+	///   This method consumes a number of characters equivalent to the number of text elements in
+	///   <paramref name="text"/>.
+	/// </para>
+	/// <para>
+	///   If <paramref name="text"/> is empty or <see cref="IsExhausted"/> is <see langword="true"/>, the method call
+	///   is ignored.
+	/// </para>
 	/// </remarks>
 	/// <param name="text">
 	///   The text to append.
@@ -195,6 +202,14 @@ public class TextBuilder
 	/// <summary>
 	///   Appends an icon associated to the specified <see cref="Texture2D"/>.
 	/// </summary>
+	/// <remarks>
+	/// <para>
+	///   This method consumes exactly one character from the visible character limit.
+	/// </para>
+	/// <para>
+	///   If <see cref="IsExhausted"/> is <see langword="true"/>, the method call is ignored.
+	/// </para>
+	/// </remarks>
 	/// <param name="texture">
 	///   The texture associated to the icon.
 	/// </param>
