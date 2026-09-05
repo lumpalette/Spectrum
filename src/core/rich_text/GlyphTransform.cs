@@ -21,7 +21,7 @@ public ref struct GlyphTransform
 	/// <param name="linePosition">
 	///   The position of the glyph relative to the source line.
 	/// </param>
-	/// <param name="lineLength">i
+	/// <param name="lineLength">
 	///   The number of glyphs in the source line.
 	/// </param>
 	public GlyphTransform(in Glyph glyph, double elapsedTime, int linePosition, int lineLength)

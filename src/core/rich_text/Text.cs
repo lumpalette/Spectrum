@@ -270,26 +270,26 @@ public partial class Text
 		var shaper = new Shaper
 		{
 			// Input.
-			TS       = _TS,
-			Items    = _items,
+			TS = _TS,
+			Items = _items,
 			StyleMap = _styleMap,
 
 			// Layout options.
-			MaxWidth      = Width,
+			MaxWidth = Width,
 			BaseAlignment = Alignment,
-			Direction     = TextServer.Direction.Auto,
-			Orientation   = TextServer.Orientation.Horizontal, // for now, only horizontal scripts are supported.
+			Direction = TextServer.Direction.Auto,
+			Orientation = TextServer.Orientation.Horizontal, // for now, only horizontal scripts are supported.
 
 			// Output.
-			Glyphs     = _glyphs,
-			Lines      = _lines,
-			Markers    = _markers,
+			Glyphs = _glyphs,
+			Lines = _lines,
+			Markers = _markers,
 			Paragraphs = _paragraphs,
 
 			// Fallback values.
-			FallbackFont     = _fallbackFont!,
+			FallbackFont = _fallbackFont!,
 			FallbackFontSize = _fallbackFontSize,
-			FallbackLeading  = _fallbackLeading
+			FallbackLeading = _fallbackLeading
 		};
 
 		shaper.Shape();
@@ -315,13 +315,21 @@ public partial class Text
 
 		foreach (var item in _items)
 		{
-			if (item.Type is not (ShapeItemType.Run or ShapeItemType.Icon) || _styleMap.ContainsKey(item.Style))
+			if (item.Type is not (ShapeItemType.Run or ShapeItemType.Icon))
+			{
+				continue;
+			}
+
+			var itemStyle = (item.Type == ShapeItemType.Run) ? item.Run!.Value.Style : item.Icon!.Value.Style;
+			
+			if (_styleMap.ContainsKey(itemStyle))
 			{
 				continue;
 			}
 
 			// We don't pass the line spacing to the font, as it is stored inside the LineSpan.Leading separately.
-			var mergedStyle = item.Style.MergedWith(baseStyle);
+			var mergedStyle = itemStyle.MergedWith(baseStyle);
+			
 			var font = mergedStyle.Font!.GetVariant(mergedStyle.FontStyle!.Value);
 			var spacing = mergedStyle.Spacing!.Value;
 			
@@ -334,7 +342,7 @@ public partial class Text
 				};
 			}
 
-			_styleMap[item.Style] = new ResolvedStyle
+			_styleMap[itemStyle] = new ResolvedStyle
 			{
 				Font = font,
 				FontSize = mergedStyle.FontSize!.Value,

@@ -14,25 +14,69 @@ public partial class FontFamily : TextResource
 	///   Gets the regular (upright, normal weight) font resource of the family.
 	/// </summary>
 	[Export, NotNull]
-	public Font? Regular { get; private set; }
+	public Font? Regular
+	{
+		get;
+		set
+		{
+			if (field != value)
+			{
+				field = value;
+				EmitChanged();
+			}
+		}
+	}
 
 	/// <summary>
 	///   Gets the bold font resource of the family, if provided.
 	/// </summary>
 	[Export]
-	public Font? Bold { get; private set; }
+	public Font? Bold
+	{
+		get;
+		set
+		{
+			if (field != value)
+			{
+				field = value;
+				EmitChanged();
+			}
+		}
+	}
 
 	/// <summary>
 	///   Gets the italic font resource of the family, if provided.
 	/// </summary>
 	[Export]
-	public Font? Italic { get; private set; }
+	public Font? Italic
+	{
+		get;
+		set
+		{
+			if (field != value)
+			{
+				field = value;
+				EmitChanged();
+			}
+		}
+	}
 
 	/// <summary>
 	///   Gets the bold-italic font resource of the family, if provided.
 	/// </summary>
 	[Export]
-	public Font? BoldItalic { get; private set; }
+	public Font? BoldItalic
+	{
+		get;
+		set
+		{
+			if (field != value)
+			{
+				field = value;
+				EmitChanged();
+			}
+		}
+	}
 
 	/// <summary>
 	///   Gets the <see cref="Font"/> that best matches the specified <see cref="FontStyle"/>, synthesizing a faux
@@ -56,10 +100,10 @@ public partial class FontFamily : TextResource
 
 		var font = (bold, italic) switch
 		{
-			(true, true)  => BoldItalic,
+			(true, true) => BoldItalic,
 			(true, false) => Bold,
 			(false, true) => Italic,
-			_             => Regular
+			_ => Regular
 		};
 
 		if (font is not null)

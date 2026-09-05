@@ -78,19 +78,19 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 		return new Glyph
 		{
 			Start = (int)gl["start"],
-			End   = (int)gl["end"],
+			End = (int)gl["end"],
 
-			Count  = (byte)gl["count"],
+			Count = (byte)gl["count"],
 			Repeat = (byte)gl["repeat"],
-			Flags  = (ushort)gl["flags"],
+			Flags = (ushort)gl["flags"],
 
-			Offset  = (Vector2)gl["offset"],
+			Offset = (Vector2)gl["offset"],
 			Advance = (float)gl["advance"],
 
-			Font     = (Rid)gl["font_rid"],
+			Font = (Rid)gl["font_rid"],
 			FontSize = (ushort)gl["font_size"],
-			Index    = (ushort)gl["index"],
-			Style    = style,
+			Index = (ushort)gl["index"],
+			Style = style,
 		};
 	}
 
@@ -99,18 +99,18 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 		return new Glyph
 		{
 			Start = (int)gl["start"],
-			End   = (int)gl["end"],
+			End = (int)gl["end"],
 
-			Count  = 1,
+			Count = 1,
 			Repeat = (byte)gl["repeat"],
-			Flags  = (ushort)(TextServer.GraphemeFlag.Valid | TextServer.GraphemeFlag.EmbeddedObject),
+			Flags = (ushort)(TextServer.GraphemeFlag.Valid | TextServer.GraphemeFlag.EmbeddedObject),
 
-			Offset  = rect.Position,
+			Offset = rect.Position,
 			Advance = (float)gl["advance"],
 
 			IconTexture = tex,
-			IconSize    = rect.Size,
-			Style       = style,
+			IconSize = rect.Size,
+			Style = style,
 		};
 	}
 }

@@ -26,7 +26,10 @@ public partial class StyleTemplate : TextResource
 		{
 			if (field != value)
 			{
+				field?.Changed -= EmitChanged;
 				field = value;
+				field?.Changed += EmitChanged;
+
 				EmitChanged();
 			}
 		}
