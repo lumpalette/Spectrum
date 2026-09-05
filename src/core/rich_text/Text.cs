@@ -10,16 +10,16 @@ namespace Espejismo.Core.RichText;
 /// <summary>
 ///   Represents a rich-text string that can be shaped into renderable glyphs.
 /// </summary>
-public partial class Text
+public sealed partial class Text : IDisposable
 {
 	private readonly TextServer _TS = TextServerManager.GetPrimaryInterface();
 	private readonly Dictionary<TextStyle, ResolvedStyle> _styleMap = [];
 	private readonly List<Glyph> _glyphs = [];
 	private readonly List<LineLayout> _lines = [];
 	private readonly List<TextMarker> _markers = [];
-	private readonly List<Paragraph> _paragraphs = [];
-
+	
 	private readonly ShapeItem[] _items;
+	private readonly Rid _shaped;
 
 	private Font? _fallbackFont;
 	private ushort _fallbackFontSize;
@@ -27,6 +27,9 @@ public partial class Text
 
 	internal Text(ShapeItem[] items, TextStyle style)
 	{
+		// For now, only horizontal scripts are supported.
+		_shaped = _TS.CreateShapedText();
+
 		_items = items;
 
 		if (style == default)
@@ -37,6 +40,14 @@ public partial class Text
 		{
 			Style = style;
 		}
+	}
+
+	/// <summary>
+	///   Releases the internal <see cref="TextServer"/> shaped buffer.
+	/// </summary>
+	~Text()
+	{
+		Dispose();
 	}
 
 	/// <summary>
@@ -152,6 +163,22 @@ public partial class Text
 	}
 
 	/// <summary>
+	///   Gets or sets the horizontal alignment of the text.
+	/// </summary>
+	public HorizontalAlignment Alignment
+	{
+		get;
+		set
+		{
+			if (field != value)
+			{
+				field = value;
+				Invalidate();
+			}
+		}
+	}
+
+	/// <summary>
 	///   Gets the total size occupied by the shaped content, in pixels.
 	/// </summary>
 	/// <remarks>
@@ -193,22 +220,6 @@ public partial class Text
 			}
 
 			return size;
-		}
-	}
-
-	/// <summary>
-	///   Gets or sets the horizontal alignment of the text.
-	/// </summary>
-	public HorizontalAlignment Alignment
-	{
-		get;
-		set
-		{
-			if (field != value)
-			{
-				field = value;
-				Invalidate();
-			}
 		}
 	}
 
@@ -258,45 +269,51 @@ public partial class Text
 			return;
 		}
 
-		IsDirty = false;
-
-		// The shaper doesn't automatically clear the output.
-		_glyphs.Clear();
-		_lines.Clear();
-		_markers.Clear();
-		_paragraphs.Clear();
-
-		// Now it looks nicer, cool I guess.
-		var shaper = new Shaper
+		// Now it looks cursed again, which is good.
+		new Shaper
 		{
 			// Input.
-			TS = _TS,
-			Items = _items,
+			TS       = _TS,
+			Items    = _items,
 			StyleMap = _styleMap,
 
 			// Layout options.
-			MaxWidth = Width,
-			BaseAlignment = Alignment,
-			Direction = TextServer.Direction.Auto,
-			Orientation = TextServer.Orientation.Horizontal, // for now, only horizontal scripts are supported.
-
-			// Output.
-			Glyphs = _glyphs,
-			Lines = _lines,
+			MaxWidth    = Width,
+			Alignment   = Alignment,
+			Orientation = TextServer.Orientation.Horizontal,
+			
+			// Output buffers.
+			Shaped  = _shaped,
+			Glyphs  = _glyphs,
+			Lines   = _lines,
 			Markers = _markers,
-			Paragraphs = _paragraphs,
-
+			
 			// Fallback values.
-			FallbackFont = _fallbackFont!,
+			FallbackFont     = _fallbackFont!,
 			FallbackFontSize = _fallbackFontSize,
-			FallbackLeading = _fallbackLeading
-		};
+			FallbackLeading  = _fallbackLeading
+		}.Shape();
 
-		shaper.Shape();
+		IsDirty = false;
+	}
+
+	/// <summary>
+	///   Releases the internal <see cref="TextServer"/> shaped buffer.
+	/// </summary>
+	public void Dispose()
+	{
+		_TS.FreeRid(_shaped);
+		GC.SuppressFinalize(this);
 	}
 
 	private void Invalidate()
 	{
+		_TS.ShapedTextClear(_shaped);
+
+		_glyphs.Clear();
+		_lines.Clear();
+		_markers.Clear();
+
 		IsDirty = true;
 	}
 

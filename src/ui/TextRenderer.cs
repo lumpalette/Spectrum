@@ -209,23 +209,22 @@ public partial class TextRenderer : Control
 		var canvas = GetCanvasItem();
 		var position = new Vector2 { Y = GetVerticalOffset(out var lineGap) };
 
-		var charactersDrawn = 0;
 		var clusterVisible = true;
 
 		foreach (ref readonly var line in _shaped.Lines)
 		{
 			// TextServer.font_draw_glyph() starts drawing from the baseline, so we have to account for that.
-			position.X = GetLineOffset(line);
 			position.Y += line.Ascent;
+			position.X = GetLineOffset(line);
 
 			for (var i = 0; i < line.Length; i++)
 			{
 				ref readonly var g = ref _shaped.Glyphs[line.Start + i];
 
+				// Glyph visibility is only determined at the start of its cluster.
 				if (g.Count > 0)
 				{
-					clusterVisible = VisibleCharacters == -1 || charactersDrawn < VisibleCharacters;
-					charactersDrawn++;
+					clusterVisible = VisibleCharacters == -1 || g.Start < VisibleCharacters;
 				}
 
 				if (clusterVisible)
@@ -251,6 +250,11 @@ public partial class TextRenderer : Control
 		if (what == NotificationResized)
 		{
 			UpdateShaped(parse: false);
+		}
+		else if (what == NotificationPredelete)
+		{
+			_shaped?.Dispose();
+			_shaped = null;
 		}
 
 		base._Notification(what);
@@ -284,6 +288,7 @@ public partial class TextRenderer : Control
 
 		if (parse || _shaped is null)
 		{
+			_shaped?.Dispose();
 			_shaped = Core.RichText.Text.Parse(Text, style, TrimBeforeShaping ? VisibleCharacters : -1);
 		}
 

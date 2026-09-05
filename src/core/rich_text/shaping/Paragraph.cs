@@ -3,9 +3,11 @@ using Godot;
 namespace Espejismo.Core.RichText.Shaping;
 
 // A container of shaped text that shares the same alignment.
-internal readonly struct Paragraph(TextServer TS, TextServer.Direction direction, TextServer.Orientation orientation)
+internal readonly struct Paragraph
 {
-	public Rid Shaped { get; init; } = TS.CreateShapedText(direction, orientation);
+	public int Start { get; init; }
+
+	public int Length { get; init; }
 
 	public HorizontalAlignment Alignment { get; init; }
 

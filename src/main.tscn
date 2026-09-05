@@ -1,3 +1,14 @@
 [gd_scene format=3 uid="uid://b33c8l4fw10vj"]
 
+[ext_resource type="Script" uid="uid://c43ggny6ffklj" path="res://src/ui/TextRenderer.cs" id="1_eewff"]
+
 [node name="Main" type="Node" unique_id=213237798]
+
+[node name="TextRenderer" type="Control" parent="." unique_id=1248443836]
+layout_mode = 3
+anchors_preset = 0
+offset_right = 90.0
+offset_bottom = 40.0
+script = ExtResource("1_eewff")
+Text = "Chara es una"
+metadata/_custom_type_script = "uid://c43ggny6ffklj"

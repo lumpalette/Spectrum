@@ -16,6 +16,7 @@ internal readonly struct Shaper()
 	 * 
 	 * no puedo martha
 	 */
+	private readonly List<Paragraph> _paragraphs = [];
 
 	// Input.
 	public required TextServer TS { get; init; }
@@ -24,15 +25,14 @@ internal readonly struct Shaper()
 
 	// Layout options.
 	public required float MaxWidth { get; init; }
-	public required HorizontalAlignment BaseAlignment { get; init; }
-	public required TextServer.Direction Direction { get; init; }
+	public required HorizontalAlignment Alignment { get; init; }
 	public required TextServer.Orientation Orientation { get; init; }
-
-	// Output, the lists must be cleared by caller.
+	
+	// Output buffers, must be cleared by caller.
+	public required Rid Shaped { get; init; }
 	public required List<Glyph> Glyphs { get; init; }
 	public required List<LineLayout> Lines { get; init; }
 	public required List<TextMarker> Markers { get; init; }
-	public required List<Paragraph> Paragraphs { get; init; }
 
 	// Fallback values.
 	public required Font FallbackFont { get; init; }
@@ -43,13 +43,13 @@ internal readonly struct Shaper()
 	{
 		if (Items.Length == 0)
 		{
-			InsertEmptyLine(BaseAlignment);
+			InsertEmptyLine(Alignment);
 			return;
 		}
 
 		WriteParagraphs();
 
-		if (Paragraphs.Count > 0)
+		if (_paragraphs.Count > 0)
 		{
 			WriteLines();
 		}
@@ -57,12 +57,8 @@ internal readonly struct Shaper()
 
 	private void WriteParagraphs()
 	{
-		if (Items.Length == 0)
-		{
-			return;
-		}
-
-		var paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = BaseAlignment };
+		var paragraph = new Paragraph { Alignment = Alignment };
+		var length = 0;
 		var independent = true;
 
 		for (var i = 0; i < Items.Length; i++)
@@ -76,34 +72,53 @@ internal readonly struct Shaper()
 					var fonts = resolved.Font.GetRids();
 					var fontSize = resolved.FontSize;
 
-					TS.ShapedTextAddString(paragraph.Shaped, item.Run!.Value.Text, fonts, fontSize, meta: i);
+					var current = TS.ShapedTextGetGlyphCount(Shaped);
+					TS.ShapedTextAddString(Shaped, item.Run!.Value.Text, fonts, fontSize, meta: i);
+
+					length += (int)(TS.ShapedTextGetGlyphCount(Shaped) - current);
 					break;
 
 				case ShapeItemType.Icon:
-					TS.ShapedTextAddObject(paragraph.Shaped, i, item.Icon!.Value.Size, item.Icon!.Value.Alignment);
+					TS.ShapedTextAddObject(Shaped, i, item.Icon!.Value.Size, item.Icon!.Value.Alignment);
+					length++;
 					break;
 
 				case ShapeItemType.Marker:
-					TS.ShapedTextAddObject(paragraph.Shaped, i, Vector2.Zero);
+					TS.ShapedTextAddObject(Shaped, i, Vector2.Zero);
+					length++;
 					break;
 
 				case ShapeItemType.Break:
 					if (independent)
 					{
-						Paragraphs.Add(paragraph);
-						paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = paragraph.Alignment };
+						_paragraphs.Add(paragraph with { Length = length });
+						
+						paragraph = new Paragraph
+						{
+							Start = (int)TS.ShapedTextGetGlyphCount(Shaped),
+							Alignment = paragraph.Alignment
+						};
+
+						length = 0;
 					}
 
 					independent = true;
 					break;
 
 				case ShapeItemType.Align:
-					var alignment = item.Align!.Value.Alignment ?? BaseAlignment;
+					var alignment = item.Align!.Value.Alignment ?? Alignment;
 
 					if (paragraph.HasContent)
 					{
-						Paragraphs.Add(paragraph);
-						paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = alignment };
+						_paragraphs.Add(paragraph with { Length = length });
+						
+						paragraph = new Paragraph
+						{
+							Start = (int)TS.ShapedTextGetGlyphCount(Shaped),
+							Alignment = alignment
+						};
+
+						length = 0;
 					}
 					else
 					{
@@ -123,33 +138,36 @@ internal readonly struct Shaper()
 
 		if (independent)
 		{
-			Paragraphs.Add(paragraph);
-		}
-		else
-		{
-			TS.FreeRid(paragraph.Shaped);
+			_paragraphs.Add(paragraph with { Length = length });
 		}
 	}
 
 	private void WriteLines()
 	{
-		foreach (var paragraph in Paragraphs)
+		foreach (var paragraph in _paragraphs)
 		{
 			if (!paragraph.HasContent)
 			{
 				InsertEmptyLine(paragraph.Alignment);
-				TS.FreeRid(paragraph.Shaped);
 				continue;
 			}
 
-			var breaks = CalculateLineBreaks(paragraph.Shaped);
+			var paraShaped = TS.ShapedTextSubstr(Shaped, paragraph.Start, paragraph.Length);
+			var breaks = CalculateLineBreaks(paraShaped);
 
 			for (var i = 0; i < breaks.Length; i += 2)
 			{
-				InsertLine(paragraph, breaks[i], breaks[i + 1] - breaks[i]);
+				var lineShaped = TS.ShapedTextSubstr(paraShaped, breaks[i], breaks[i + 1] - breaks[i]);
+
+				if (paragraph.Alignment == HorizontalAlignment.Fill && MaxWidth > 0)
+				{
+					TS.ShapedTextFitToWidth(lineShaped, MaxWidth);
+				}
+
+				InsertLine(lineShaped, paragraph.Alignment);
 			}
 
-			TS.FreeRid(paragraph.Shaped);
+			TS.FreeRid(paraShaped);
 		}
 	}
 
@@ -161,6 +179,9 @@ internal readonly struct Shaper()
 			| TextServer.LineBreakFlag.Adaptive
 			| TextServer.LineBreakFlag.TrimStartEdgeSpaces
 			| TextServer.LineBreakFlag.TrimEndEdgeSpaces;
+
+		var arr = TS.ShapedTextGetLineBreaks(shaped, width, start: 0, breakFlags);
+		var w = TS.ShapedTextGetWidth(TS.ShapedTextSubstr(shaped, arr[0], arr[1] - arr[0]));
 
 		return TS.ShapedTextGetLineBreaks(shaped, width, start: 0, breakFlags);
 	}
@@ -198,9 +219,8 @@ internal readonly struct Shaper()
 			alignment));
 	}
 
-	private void InsertLine(Paragraph paragraph, int start, int length)
+	private void InsertLine(Rid lineShaped, HorizontalAlignment alignment)
 	{
-		var lineShaped = SplitParagraph(paragraph, start, length);
 		var initialGlyphCount = Glyphs.Count;
 		var maxLeading = float.MinValue;
 
@@ -221,21 +241,9 @@ internal readonly struct Shaper()
 			ascent: (float)TS.ShapedTextGetAscent(lineShaped),
 			descent: (float)TS.ShapedTextGetDescent(lineShaped),
 			maxLeading,
-			paragraph.Alignment));
+			alignment));
 
 		TS.FreeRid(lineShaped);
-	}
-
-	private Rid SplitParagraph(Paragraph paragraph, int start, int length)
-	{
-		var lineShaped = TS.ShapedTextSubstr(paragraph.Shaped, start, length);
-
-		if (paragraph.Alignment == HorizontalAlignment.Fill && MaxWidth > 0)
-		{
-			TS.ShapedTextFitToWidth(lineShaped, MaxWidth);
-		}
-
-		return lineShaped;
 	}
 
 	// Returns the leading associated to the specified glyph.

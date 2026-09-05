@@ -19,7 +19,7 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 	public int End { get; private init; }
 
 	/// <summary>
-	///   Gets the number of glyphs in the grapheme cluster, only set in the first glyph.
+	///   Gets the number of glyphs in the grapheme cluster, only set in the first glyph of the cluster.
 	/// </summary>
 	public byte Count { get; private init; }
 
