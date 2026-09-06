@@ -159,7 +159,7 @@ public class TextBuilder
 	/// </summary>
 	/// <remarks>
 	/// <para>
-	///   This method consumes a number of characters equivalent to the number of text elements in
+	///   This method consumes a number of characters equivalent to the number of grapheme clusters in
 	///   <paramref name="text"/>.
 	/// </para>
 	/// <para>

@@ -206,9 +206,11 @@ public partial class TextRenderer : Control
 			case NotificationPredelete:
 				_shaped?.Dispose();
 				break;
+
 			case NotificationDraw:
 				Render();
 				break;
+
 			case NotificationResized:
 				UpdateShaped(parse: false);
 				break;

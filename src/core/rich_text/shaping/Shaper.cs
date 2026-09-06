@@ -1,5 +1,7 @@
 using Godot;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 
 namespace Espejismo.Core.RichText.Shaping;
 
@@ -55,13 +57,28 @@ internal readonly struct Shaper()
 		}
 	}
 
-	private void WriteParagraphs()
+	private static int CountClusters(ReadOnlySpan<char> text)
 	{
-		if (Items.Length == 0)
+		var count = 0;
+
+		while (!text.IsEmpty)
 		{
-			return;
+			var len = StringInfo.GetNextTextElementLength(text);
+
+			if (len == 0)
+			{
+				break;
+			}
+
+			count++;
+			text = text[len..];
 		}
 
+		return count;
+	}
+
+	private void WriteParagraphs()
+	{
 		var paragraph = new Paragraph { Alignment = Alignment };
 		var independent = true;
 
@@ -79,7 +96,7 @@ internal readonly struct Shaper()
 					var fontSize = resolved.FontSize;
 
 					TS.ShapedTextAddString(Shaped, run.Text, fonts, fontSize, meta: i);
-					paragraph.Length += run.Text.Length;
+					paragraph.Length += CountClusters(run.Text);
 					break;
 
 				case ShapeItemType.Icon:
