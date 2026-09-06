@@ -199,58 +199,19 @@ public partial class TextRenderer : Control
 	}
 
 	/// <inheritdoc/>
-	public override void _Draw()
-	{
-		if (_shaped is null or { Length: 0 })
-		{
-			return;
-		}
-
-		var canvas = GetCanvasItem();
-		var position = new Vector2 { Y = GetVerticalOffset(out var lineGap) };
-
-		var charactersDrawn = 0;
-		var clusterVisible = true;
-
-		foreach (ref readonly var line in _shaped.Lines)
-		{
-			// TextServer.font_draw_glyph() starts drawing from the baseline, so we have to account for that.
-			position.X = GetLineOffset(line);
-			position.Y += line.Ascent;
-
-			for (var i = 0; i < line.Length; i++)
-			{
-				ref readonly var g = ref _shaped.Glyphs[line.Start + i];
-
-				if (g.Count > 0)
-				{
-					clusterVisible = VisibleCharacters == -1 || charactersDrawn < VisibleCharacters;
-					charactersDrawn++;
-				}
-
-				if (clusterVisible)
-				{
-					var visibility = RenderGlyph(g, canvas, position, i, line.Length);
-
-					if (visibility == GlyphVisibility.Omitted)
-					{
-						continue;
-					}
-				}
-
-				position.X += g.Advance * g.Repeat;
-			}
-
-			position.Y += line.Descent + line.Leading + lineGap;
-		}
-	}
-
-	/// <inheritdoc/>
 	public override void _Notification(int what)
 	{
-		if (what == NotificationResized)
+		switch ((long)what)
 		{
-			UpdateShaped(parse: false);
+			case NotificationPredelete:
+				_shaped?.Dispose();
+				break;
+			case NotificationDraw:
+				Render();
+				break;
+			case NotificationResized:
+				UpdateShaped(parse: false);
+				break;
 		}
 
 		base._Notification(what);
@@ -284,6 +245,7 @@ public partial class TextRenderer : Control
 
 		if (parse || _shaped is null)
 		{
+			_shaped?.Dispose();
 			_shaped = Core.RichText.Text.Parse(Text, style, TrimBeforeShaping ? VisibleCharacters : -1);
 		}
 
@@ -294,43 +256,53 @@ public partial class TextRenderer : Control
 		QueueRedraw();
 	}
 
-	private float GetVerticalOffset(out float lineGap)
+	private void Render()
 	{
-		lineGap = 0f;
-
-		var contentHeight = _shaped!.ContentSize.Y;
-		var numberOfLines = _shaped!.Lines.Length;
-
-		switch (VerticalAlignment)
+		if (_shaped is null or { Length: 0 })
 		{
-			case VerticalAlignment.Center:
-				return (Size.Y - contentHeight) / 2f;
-			case VerticalAlignment.Bottom:
-				return Size.Y - contentHeight;
-			case VerticalAlignment.Fill:
-				if (numberOfLines > 0)
-				{
-					lineGap = Math.Max(0f, Size.Y - contentHeight) / (numberOfLines - 1);
-				}
-				return 0f;
+			return;
 		}
 
-		return 0f;
+		var canvas = GetCanvasItem();
+		var position = new Vector2 { Y = GetVerticalOffset(out var lineGap) };
+
+		foreach (ref readonly var line in _shaped.Lines)
+		{
+			// TextServer.font_draw_glyph() starts drawing from the baseline, so we have to account for that.
+			position.Y += line.Ascent;
+			position.X = GetLineOffset(line);
+
+			RenderLine(line, canvas, position);
+
+			position.Y += line.Descent + line.Leading + lineGap;
+		}
 	}
 
-	private float GetLineOffset(in LineLayout line)
+	private void RenderLine(in LineLayout line, Rid canvas, Vector2 position)
 	{
-		if (line.Alignment == HorizontalAlignment.Center)
+		var clusterVisible = true;
+
+		for (var i = 0; i < line.Length; i++)
 		{
-			return (Size.X - line.Width) / 2f;
+			ref readonly var g = ref _shaped!.Glyphs[line.Start + i];
+
+			if (g.Count > 0)
+			{
+				clusterVisible = VisibleCharacters == -1 || g.Start < VisibleCharacters;
+			}
+
+			if (clusterVisible)
+			{
+				var visibility = RenderGlyph(g, canvas, position, i, line.Length);
+
+				if (visibility == GlyphVisibility.Omitted)
+				{
+					continue;
+				}
+			}
+
+			position.X += g.Advance * g.Repeat;
 		}
- 
-		if (line.Alignment == HorizontalAlignment.Right)
-		{
-			return Size.X - line.Width;
-		}
- 
-		return 0f;
 	}
 
 	private GlyphVisibility RenderGlyph(in Glyph g, Rid canvas, Vector2 position, int linePosition, int lineLength)
@@ -401,6 +373,45 @@ public partial class TextRenderer : Control
 		}
 
 		return GlyphVisibility.Visible;
+	}
+
+	private float GetVerticalOffset(out float lineGap)
+	{
+		lineGap = 0f;
+
+		var contentHeight = _shaped!.ContentSize.Y;
+		var numberOfLines = _shaped!.Lines.Length;
+
+		switch (VerticalAlignment)
+		{
+			case VerticalAlignment.Center:
+				return (Size.Y - contentHeight) / 2f;
+			case VerticalAlignment.Bottom:
+				return Size.Y - contentHeight;
+			case VerticalAlignment.Fill:
+				if (numberOfLines > 0)
+				{
+					lineGap = Math.Max(0f, Size.Y - contentHeight) / (numberOfLines - 1);
+				}
+				return 0f;
+		}
+
+		return 0f;
+	}
+
+	private float GetLineOffset(in LineLayout line)
+	{
+		if (line.Alignment == HorizontalAlignment.Center)
+		{
+			return (Size.X - line.Width) / 2f;
+		}
+ 
+		if (line.Alignment == HorizontalAlignment.Right)
+		{
+			return Size.X - line.Width;
+		}
+ 
+		return 0f;
 	}
 
 	private void OnStylePropertyChanged()

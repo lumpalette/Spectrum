@@ -17,6 +17,8 @@ internal readonly struct Shaper()
 	 * no puedo martha
 	 */
 
+	private readonly List<Paragraph> _paragraphs = [];
+
 	// Input.
 	public required TextServer TS { get; init; }
 	public required ShapeItem[] Items { get; init; }
@@ -24,15 +26,13 @@ internal readonly struct Shaper()
 
 	// Layout options.
 	public required float MaxWidth { get; init; }
-	public required HorizontalAlignment BaseAlignment { get; init; }
-	public required TextServer.Direction Direction { get; init; }
-	public required TextServer.Orientation Orientation { get; init; }
-
-	// Output, the lists must be cleared by caller.
+	public required HorizontalAlignment Alignment { get; init; }
+	
+	// Output buffers, they must be cleared by caller.
+	public required Rid Shaped { get; init; }
 	public required List<Glyph> Glyphs { get; init; }
 	public required List<LineLayout> Lines { get; init; }
 	public required List<TextMarker> Markers { get; init; }
-	public required List<Paragraph> Paragraphs { get; init; }
 
 	// Fallback values.
 	public required Font FallbackFont { get; init; }
@@ -43,13 +43,13 @@ internal readonly struct Shaper()
 	{
 		if (Items.Length == 0)
 		{
-			InsertEmptyLine(BaseAlignment);
+			InsertEmptyLine(Alignment);
 			return;
 		}
 
 		WriteParagraphs();
 
-		if (Paragraphs.Count > 0)
+		if (_paragraphs.Count > 0)
 		{
 			WriteLines();
 		}
@@ -62,7 +62,7 @@ internal readonly struct Shaper()
 			return;
 		}
 
-		var paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = BaseAlignment };
+		var paragraph = new Paragraph { Alignment = Alignment };
 		var independent = true;
 
 		for (var i = 0; i < Items.Length; i++)
@@ -72,84 +72,107 @@ internal readonly struct Shaper()
 			switch (item.Type)
 			{
 				case ShapeItemType.Run:
-					var resolved = StyleMap[item.Run!.Value.Style];
+					var run = item.Run!.Value;
+
+					var resolved = StyleMap[run.Style];
 					var fonts = resolved.Font.GetRids();
 					var fontSize = resolved.FontSize;
 
-					TS.ShapedTextAddString(paragraph.Shaped, item.Run!.Value.Text, fonts, fontSize, meta: i);
+					TS.ShapedTextAddString(Shaped, run.Text, fonts, fontSize, meta: i);
+					paragraph.Length += run.Text.Length;
 					break;
 
 				case ShapeItemType.Icon:
-					TS.ShapedTextAddObject(paragraph.Shaped, i, item.Icon!.Value.Size, item.Icon!.Value.Alignment);
+					TS.ShapedTextAddObject(Shaped, i, item.Icon!.Value.Size, item.Icon!.Value.Alignment);
+					paragraph.Length++;
 					break;
 
 				case ShapeItemType.Marker:
-					TS.ShapedTextAddObject(paragraph.Shaped, i, Vector2.Zero);
+					TS.ShapedTextAddObject(Shaped, i, Vector2.Zero);
+					paragraph.Length++;
 					break;
 
 				case ShapeItemType.Break:
 					if (independent)
 					{
-						Paragraphs.Add(paragraph);
-						paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = paragraph.Alignment };
+						_paragraphs.Add(paragraph);
+
+						paragraph = new Paragraph
+						{
+							Start = (int)TS.ShapedTextGetGlyphCount(Shaped),
+							Alignment = paragraph.Alignment
+						};
 					}
 
 					independent = true;
 					break;
 
 				case ShapeItemType.Align:
-					var alignment = item.Align!.Value.Alignment ?? BaseAlignment;
+					var itemAlignment = item.Align!.Value.Alignment ?? Alignment;
 
-					if (paragraph.HasContent)
+					if (paragraph.Length > 0)
 					{
-						Paragraphs.Add(paragraph);
-						paragraph = new Paragraph(TS, Direction, Orientation) { Alignment = alignment };
+						_paragraphs.Add(paragraph);
+
+						paragraph = new Paragraph
+						{
+							Start = (int)TS.ShapedTextGetGlyphCount(Shaped),
+							Alignment = itemAlignment
+						};
 					}
 					else
 					{
-						paragraph = paragraph with { Alignment = alignment };
+						paragraph.Alignment = itemAlignment;
 					}
 
 					independent = false; // stupid
 					break;
 			}
-
-			if (item.Type is ShapeItemType.Run or ShapeItemType.Icon or ShapeItemType.Marker)
-			{
-				paragraph = paragraph with { HasContent = true };
-				independent = true;
-			}
 		}
 
 		if (independent)
 		{
-			Paragraphs.Add(paragraph);
+			_paragraphs.Add(paragraph);
 		}
-		else
-		{
-			TS.FreeRid(paragraph.Shaped);
-		}
+
+		/* There is a bug in TextServerAdvance::shaped_text_get_line_breaks that assumes that the passed shaped cannot
+		 * be a substr buffer. The method internally calls shaped_text_update_breaks, which is responsible for setting
+		 * the grapheme flags used by BREAK_WORD_BOUND. It does it by directly reading the text data from the passed
+		 * shaped, but substr buffers does not contain any actual data, but a pointer to the source shaped. Because of
+		 * this, those flags are not set, and it makes that shaped_text_get_line_breaks returns incorrect results.
+		 * 
+		 * By calling this method on the source shaped, we make sure that the grapheme flags are set, making every
+		 * subsequent substr have the correct data.
+		 */
+		TS.ShapedTextGetLineBreaks(Shaped, float.MaxValue, 0, TextServer.LineBreakFlag.WordBound);
 	}
 
 	private void WriteLines()
 	{
-		foreach (var paragraph in Paragraphs)
+		foreach (var paragraph in _paragraphs)
 		{
-			if (!paragraph.HasContent)
+			if (paragraph.Length == 0)
 			{
 				InsertEmptyLine(paragraph.Alignment);
-				TS.FreeRid(paragraph.Shaped);
 				continue;
 			}
 
-			var breaks = CalculateLineBreaks(paragraph.Shaped);
+			var paraShaped = TS.ShapedTextSubstr(Shaped, paragraph.Start, paragraph.Length);
+			var breaks = CalculateLineBreaks(paraShaped);
 
 			for (var i = 0; i < breaks.Length; i += 2)
 			{
-				InsertLine(paragraph, breaks[i], breaks[i + 1] - breaks[i]);
+				var lineShaped = TS.ShapedTextSubstr(paraShaped, breaks[i], breaks[i + 1] - breaks[i]);
+
+				if (paragraph.Alignment == HorizontalAlignment.Fill && MaxWidth > 0)
+				{
+					TS.ShapedTextFitToWidth(lineShaped, MaxWidth);
+				}
+
+				InsertLine(lineShaped, paragraph.Alignment);
 			}
 
-			TS.FreeRid(paragraph.Shaped);
+			TS.FreeRid(paraShaped);
 		}
 	}
 
@@ -198,15 +221,14 @@ internal readonly struct Shaper()
 			alignment));
 	}
 
-	private void InsertLine(Paragraph paragraph, int start, int length)
+	private void InsertLine(Rid lineShaped, HorizontalAlignment alignment)
 	{
-		var lineShaped = SplitParagraph(paragraph, start, length);
 		var initialGlyphCount = Glyphs.Count;
 		var maxLeading = float.MinValue;
 
-		foreach (var g in TS.ShapedTextGetGlyphs(lineShaped))
+		foreach (var gl in TS.ShapedTextGetGlyphs(lineShaped))
 		{
-			var leading = ProcessRawGlyph(g, lineShaped);
+			var leading = ProcessRawGlyph(gl, lineShaped);
 
 			if (leading > maxLeading)
 			{
@@ -221,21 +243,9 @@ internal readonly struct Shaper()
 			ascent: (float)TS.ShapedTextGetAscent(lineShaped),
 			descent: (float)TS.ShapedTextGetDescent(lineShaped),
 			maxLeading,
-			paragraph.Alignment));
+			alignment));
 
 		TS.FreeRid(lineShaped);
-	}
-
-	private Rid SplitParagraph(Paragraph paragraph, int start, int length)
-	{
-		var lineShaped = TS.ShapedTextSubstr(paragraph.Shaped, start, length);
-
-		if (paragraph.Alignment == HorizontalAlignment.Fill && MaxWidth > 0)
-		{
-			TS.ShapedTextFitToWidth(lineShaped, MaxWidth);
-		}
-
-		return lineShaped;
 	}
 
 	// Returns the leading associated to the specified glyph.
@@ -253,10 +263,10 @@ internal readonly struct Shaper()
 		switch (item.Type)
 		{
 			case ShapeItemType.Run:
-				return AppendChar(gl, item);
+				return AppendChar(gl, item.Run!.Value);
 
 			case ShapeItemType.Icon:
-				return AppendIcon(gl, item, itemIndex, lineShaped);
+				return AppendIcon(gl, item.Icon!.Value, itemIndex, lineShaped);
 
 			default:
 				Markers.Add(new TextMarker(item.Marker!.Value.Name, item.Marker!.Value.Attributes, Glyphs.Count));
@@ -264,9 +274,9 @@ internal readonly struct Shaper()
 		}
 	}
 
-	private float AppendChar(Godot.Collections.Dictionary gl, in ShapeItem item)
+	private float AppendChar(Godot.Collections.Dictionary gl, in ItemRun item)
 	{
-		var resolved = StyleMap[item.Run!.Value.Style];
+		var resolved = StyleMap[item.Style];
 		var glyph = Glyph.CreateChar(gl, resolved.Style);
 
 		Glyphs.Add(glyph);
@@ -274,17 +284,19 @@ internal readonly struct Shaper()
 		return resolved.Leading;
 	}
 
-	private float AppendIcon(Godot.Collections.Dictionary gl, in ShapeItem item, int itemIndex, Rid shaped)
+	private float AppendIcon(Godot.Collections.Dictionary gl, in ItemIcon item, int itemIndex, Rid shaped)
 	{
+		var ori = TS.ShapedTextGetOrientation(Shaped);
 		var rect = TS.ShapedTextGetObjectRect(shaped, itemIndex);
+		
 		rect.Position = new Vector2
 		{
-			X = (Orientation == TextServer.Orientation.Vertical) ? rect.Position.X : 0f,
-			Y = (Orientation == TextServer.Orientation.Vertical) ? 0f : rect.Position.Y
+			X = (ori == TextServer.Orientation.Vertical) ? rect.Position.X : 0f,
+			Y = (ori == TextServer.Orientation.Vertical) ? 0f : rect.Position.Y
 		};
 
-		var resolved = StyleMap[item.Icon!.Value.Style];
-		var glyph = Glyph.CreateIcon(gl, resolved.Style, item.Icon!.Value.Texture, rect);
+		var resolved = StyleMap[item.Style];
+		var glyph = Glyph.CreateIcon(gl, resolved.Style, item.Texture, rect);
 
 		Glyphs.Add(glyph);
 

@@ -10,16 +10,16 @@ namespace Espejismo.Core.RichText;
 /// <summary>
 ///   Represents a rich-text string that can be shaped into renderable glyphs.
 /// </summary>
-public partial class Text
+public sealed partial class Text : IDisposable
 {
 	private readonly TextServer _TS = TextServerManager.GetPrimaryInterface();
 	private readonly Dictionary<TextStyle, ResolvedStyle> _styleMap = [];
 	private readonly List<Glyph> _glyphs = [];
 	private readonly List<LineLayout> _lines = [];
 	private readonly List<TextMarker> _markers = [];
-	private readonly List<Paragraph> _paragraphs = [];
-
+	
 	private readonly ShapeItem[] _items;
+	private readonly Rid _shaped;
 
 	private Font? _fallbackFont;
 	private ushort _fallbackFontSize;
@@ -28,6 +28,7 @@ public partial class Text
 	internal Text(ShapeItem[] items, TextStyle style)
 	{
 		_items = items;
+		_shaped = _TS.CreateShapedText();
 
 		if (style == default)
 		{
@@ -113,8 +114,9 @@ public partial class Text
 	///   Gets a value indicating whether the text has at least one assigned <see cref="TextEffect"/> instance.
 	/// </summary>
 	/// <remarks>
-	///   The value of this property is recalculated whenever <see cref="Style"/> changes. You can use this property to
-	///   determine whether the text needs to be continuously redrawn to avoid any unnecessary redraws for static text.
+	///   You can use this property to determine whether the text needs to be continuously redrawn to avoid any
+	///   unnecessary redraws for static text. The value of this property is recalculated whenever <see cref="Style"/>
+	///   changes.
 	/// </remarks>
 	public bool HasEffects { get; private set; }
 
@@ -258,45 +260,49 @@ public partial class Text
 			return;
 		}
 
-		IsDirty = false;
-
-		// The shaper doesn't automatically clear the output.
-		_glyphs.Clear();
-		_lines.Clear();
-		_markers.Clear();
-		_paragraphs.Clear();
-
-		// Now it looks nicer, cool I guess.
-		var shaper = new Shaper
+		new Shaper
 		{
 			// Input.
-			TS = _TS,
-			Items = _items,
+			TS       = _TS,
+			Items    = _items,
 			StyleMap = _styleMap,
 
 			// Layout options.
-			MaxWidth = Width,
-			BaseAlignment = Alignment,
-			Direction = TextServer.Direction.Auto,
-			Orientation = TextServer.Orientation.Horizontal, // for now, only horizontal scripts are supported.
-
+			MaxWidth    = Width,
+			Alignment   = Alignment,
+			
 			// Output.
-			Glyphs = _glyphs,
-			Lines = _lines,
+			Shaped  = _shaped,
+			Glyphs  = _glyphs,
+			Lines   = _lines,
 			Markers = _markers,
-			Paragraphs = _paragraphs,
 
 			// Fallback values.
-			FallbackFont = _fallbackFont!,
+			FallbackFont     = _fallbackFont!,
 			FallbackFontSize = _fallbackFontSize,
-			FallbackLeading = _fallbackLeading
-		};
+			FallbackLeading  = _fallbackLeading
+		}.Shape();
 
-		shaper.Shape();
+		IsDirty = false;
+	}
+
+	/// <summary>
+	///   Frees the memory from the internal <see cref="TextServer"/> shaped buffer.
+	/// </summary>
+	public void Dispose()
+	{
+		_TS.FreeRid(_shaped);
+		GC.SuppressFinalize(this);
 	}
 
 	private void Invalidate()
 	{
+		_glyphs.Clear();
+		_lines.Clear();
+		_markers.Clear();
+		
+		_TS.ShapedTextClear(_shaped);
+		
 		IsDirty = true;
 	}
 
