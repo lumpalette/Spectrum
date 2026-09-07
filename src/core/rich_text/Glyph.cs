@@ -19,7 +19,7 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 	public int End { get; private init; }
 
 	/// <summary>
-	///   Gets the number of glyphs in the grapheme cluster, only set in the first glyph.
+	///   Gets the number of glyphs in the grapheme cluster, only set in the first glyph of the grapheme cluster.
 	/// </summary>
 	public byte Count { get; private init; }
 
@@ -29,7 +29,8 @@ public readonly struct Glyph // 64 bytes pesa la marranota
 	public byte Repeat { get; private init; }
 
 	/// <summary>
-	///   Gets a value describing the category or characteristics of this glyph.
+	///   Gets a value describing the category or characteristics of this glyph, only set in the first glyph of the
+	///   grapheme cluster.
 	/// </summary>
 	public ushort Flags { get; private init; } // This is a TextServer.GraphemeFlag value.
 

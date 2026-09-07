@@ -266,13 +266,13 @@ public partial class TextRenderer : Control
 		}
 
 		var canvas = GetCanvasItem();
-		var position = new Vector2 { Y = GetVerticalOffset(out var lineGap) };
+		var position = new Vector2 { Y = GetStartVerticalOffset(out var lineGap) };
 
 		foreach (ref readonly var line in _shaped.Lines)
 		{
 			// TextServer.font_draw_glyph() starts drawing from the baseline, so we have to account for that.
 			position.Y += line.Ascent;
-			position.X = GetLineOffset(line);
+			position.X = GetLineHorizontalOffset(line);
 
 			RenderLine(line, canvas, position);
 
@@ -341,19 +341,19 @@ public partial class TextRenderer : Control
 			oColor = trans.OutlineColor;
 		}
 
+		var flags = (TextServer.GraphemeFlag)g.Flags;
+
 		for (var i = 0; i < g.Repeat; i++)
 		{
-			var flags = (TextServer.GraphemeFlag)g.Flags;
-
-			if (flags.HasFlag(TextServer.GraphemeFlag.EmbeddedObject))
-			{
-				// Text icon.
-				DrawTextureRect(g.IconTexture, new Rect2(position, g.IconSize), tile: false, color);
-			}
-			else if (!flags.HasFlag(TextServer.GraphemeFlag.Valid))
+			if (g.Count > 0 && !flags.HasFlag(TextServer.GraphemeFlag.Valid))
 			{
 				// Invalid glyph (missing from every fallback font).
 				_TS.DrawHexCodeBox(canvas, g.FontSize, position, index, color);
+			}
+			else if (flags.HasFlag(TextServer.GraphemeFlag.EmbeddedObject))
+			{
+				// Text icon.
+				DrawTextureRect(g.IconTexture, new Rect2(position, g.IconSize), tile: false, color);
 			}
 			else if (!flags.HasFlag(TextServer.GraphemeFlag.Space))
 			{
@@ -377,7 +377,22 @@ public partial class TextRenderer : Control
 		return GlyphVisibility.Visible;
 	}
 
-	private float GetVerticalOffset(out float lineGap)
+	private float GetLineHorizontalOffset(in LineLayout line)
+	{
+		if (line.Alignment == HorizontalAlignment.Center)
+		{
+			return (Size.X - line.Width) / 2f;
+		}
+ 
+		if (line.Alignment == HorizontalAlignment.Right)
+		{
+			return Size.X - line.Width;
+		}
+ 
+		return 0f;
+	}
+
+	private float GetStartVerticalOffset(out float lineGap)
 	{
 		lineGap = 0f;
 
@@ -398,21 +413,6 @@ public partial class TextRenderer : Control
 				return 0f;
 		}
 
-		return 0f;
-	}
-
-	private float GetLineOffset(in LineLayout line)
-	{
-		if (line.Alignment == HorizontalAlignment.Center)
-		{
-			return (Size.X - line.Width) / 2f;
-		}
- 
-		if (line.Alignment == HorizontalAlignment.Right)
-		{
-			return Size.X - line.Width;
-		}
- 
 		return 0f;
 	}
 

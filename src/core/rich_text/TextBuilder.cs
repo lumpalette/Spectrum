@@ -27,7 +27,7 @@ namespace Espejismo.Core.RichText;
 ///     </item>
 ///     <item>
 ///       <term>Line breaks</term>
-///       <description>Indicates the position of a structural or explicit line break.</description>
+///       <description>Indicates the position of a explicit line break.</description>
 ///     </item>
 ///     <item>
 ///       <term>Alignment</term>

@@ -57,21 +57,13 @@ internal readonly struct Shaper()
 		}
 	}
 
-	private static int CountClusters(ReadOnlySpan<char> text)
+	private static int CountCodepoints(ReadOnlySpan<char> text)
 	{
 		var count = 0;
 
-		while (!text.IsEmpty)
+		foreach (var _ in text.EnumerateRunes())
 		{
-			var len = StringInfo.GetNextTextElementLength(text);
-
-			if (len == 0)
-			{
-				break;
-			}
-
 			count++;
-			text = text[len..];
 		}
 
 		return count;
@@ -96,7 +88,7 @@ internal readonly struct Shaper()
 					var fontSize = resolved.FontSize;
 
 					TS.ShapedTextAddString(Shaped, run.Text, fonts, fontSize, meta: i);
-					paragraph.Length += CountClusters(run.Text);
+					paragraph.Length += CountCodepoints(run.Text);
 					break;
 
 				case ShapeItemType.Icon:
@@ -187,22 +179,37 @@ internal readonly struct Shaper()
 				}
 
 				InsertLine(lineShaped, paragraph.Alignment);
+
+				TS.FreeRid(lineShaped);
 			}
 
 			TS.FreeRid(paraShaped);
 		}
 	}
 
-	private int[] CalculateLineBreaks(Rid shaped)
+	private void InsertLine(Rid lineShaped, HorizontalAlignment alignment)
 	{
-		var width = (MaxWidth > 0) ? MaxWidth : float.MaxValue;
+		var initialGlyphCount = Glyphs.Count;
+		var maxLeading = float.MinValue;
 
-		var breakFlags = TextServer.LineBreakFlag.WordBound
-			| TextServer.LineBreakFlag.Adaptive
-			| TextServer.LineBreakFlag.TrimStartEdgeSpaces
-			| TextServer.LineBreakFlag.TrimEndEdgeSpaces;
+		foreach (var gl in TS.ShapedTextGetGlyphs(lineShaped))
+		{
+			var leading = ProcessRawGlyph(gl, lineShaped);
 
-		return TS.ShapedTextGetLineBreaks(shaped, width, start: 0, breakFlags);
+			if (leading > maxLeading)
+			{
+				maxLeading = leading;
+			}
+		}
+
+		Lines.Add(new LineLayout(
+			start: initialGlyphCount,
+			length: Glyphs.Count - initialGlyphCount,
+			width: (float)TS.ShapedTextGetWidth(lineShaped),
+			ascent: (float)TS.ShapedTextGetAscent(lineShaped),
+			descent: (float)TS.ShapedTextGetDescent(lineShaped),
+			maxLeading,
+			alignment));
 	}
 
 	private void InsertEmptyLine(HorizontalAlignment alignment)
@@ -238,33 +245,6 @@ internal readonly struct Shaper()
 			alignment));
 	}
 
-	private void InsertLine(Rid lineShaped, HorizontalAlignment alignment)
-	{
-		var initialGlyphCount = Glyphs.Count;
-		var maxLeading = float.MinValue;
-
-		foreach (var gl in TS.ShapedTextGetGlyphs(lineShaped))
-		{
-			var leading = ProcessRawGlyph(gl, lineShaped);
-
-			if (leading > maxLeading)
-			{
-				maxLeading = leading;
-			}
-		}
-
-		Lines.Add(new LineLayout(
-			start: initialGlyphCount,
-			length: Glyphs.Count - initialGlyphCount,
-			width: (float)TS.ShapedTextGetWidth(lineShaped),
-			ascent: (float)TS.ShapedTextGetAscent(lineShaped),
-			descent: (float)TS.ShapedTextGetDescent(lineShaped),
-			maxLeading,
-			alignment));
-
-		TS.FreeRid(lineShaped);
-	}
-
 	// Returns the leading associated to the specified glyph.
 	private float ProcessRawGlyph(Godot.Collections.Dictionary gl, Rid lineShaped)
 	{
@@ -281,13 +261,10 @@ internal readonly struct Shaper()
 		{
 			case ShapeItemType.Run:
 				return AppendChar(gl, item.Run!.Value);
-
 			case ShapeItemType.Icon:
 				return AppendIcon(gl, item.Icon!.Value, itemIndex, lineShaped);
-
 			default:
-				Markers.Add(new TextMarker(item.Marker!.Value.Name, item.Marker!.Value.Attributes, Glyphs.Count));
-				return 0f;
+				return AppendMarker(item.Marker!.Value);
 		}
 	}
 
@@ -318,5 +295,23 @@ internal readonly struct Shaper()
 		Glyphs.Add(glyph);
 
 		return resolved.Leading;
+	}
+
+	private float AppendMarker(in ItemMarker marker)
+	{
+		Markers.Add(new TextMarker(marker.Name, marker.Attributes, Glyphs.Count));
+		return 0f;
+	}
+
+	private int[] CalculateLineBreaks(Rid shaped)
+	{
+		var width = (MaxWidth > 0) ? MaxWidth : float.MaxValue;
+
+		var breakFlags = TextServer.LineBreakFlag.WordBound
+			| TextServer.LineBreakFlag.Adaptive
+			| TextServer.LineBreakFlag.TrimStartEdgeSpaces
+			| TextServer.LineBreakFlag.TrimEndEdgeSpaces;
+
+		return TS.ShapedTextGetLineBreaks(shaped, width, start: 0, breakFlags);
 	}
 }

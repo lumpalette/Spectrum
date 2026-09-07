@@ -121,7 +121,7 @@ public partial class TextConfig : TextResource
 #if TOOLS
 			return LoadFromPath();
 #else
-			field ??= LoadFromPath(ResourceLoader.CacheMode.Reuse);
+			field ??= LoadFromPath();
 			return field;
 #endif
 		}
