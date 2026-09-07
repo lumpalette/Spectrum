@@ -14,6 +14,7 @@ public partial class TextRenderer : Control
 
 	private Text? _shaped;
 	private double _elapsedTime;
+	private bool _missingFontReported;
 
 	/// <summary>
 	///   Gets or sets the formatted rich-text string to display on the screen.
@@ -47,6 +48,8 @@ public partial class TextRenderer : Control
 			{
 				return;
 			}
+
+			_missingFontReported = false;
 
 			field?.Changed -= OnStylePropertyChanged;
 			field = value;
@@ -225,17 +228,39 @@ public partial class TextRenderer : Control
 		{
 			return default;
 		}
-
-		if (StyleTemplate.Font is null)
+		
+		if (StyleTemplate.Font is null || StyleTemplate.Font.Regular is null)
 		{
-			GD.PushWarning($"{Name}: StyleTemplate's font is missing; the default style will be used.");
-			return default;
-		}
+			if (!_missingFontReported)
+			{
+				string msg;
 
-		if (StyleTemplate.Font.Regular is null)
-		{
-			GD.PushWarning($"{Name}: Regular font from StyleTemplate's font family is missing; the default style will be used.");
-			return default;
+				if (StyleTemplate.Font is null)
+				{
+					msg = $"{Name}: The assigned style is missing a font family! The default font will be used.";
+				}
+				else
+				{
+					msg = $"{Name}: The assigned style's font family does not have a regular font assigned! The default font will be used.";
+				}
+
+				GD.PushWarning(msg);
+				_missingFontReported = true;
+			}
+
+			return new TextStyle
+			{
+				FontSize = StyleTemplate.FontSize,
+				FontStyle = StyleTemplate.FontStyle,
+				Color = StyleTemplate.Color,
+				Effect = StyleTemplate.Effect,
+				Spacing = StyleTemplate.Spacing,
+				ShadowSize = StyleTemplate.ShadowSize,
+				ShadowColor = StyleTemplate.ShadowColor,
+				ShadowOffset = StyleTemplate.ShadowOffset,
+				OutlineSize = StyleTemplate.OutlineSize,
+				OutlineColor = StyleTemplate.OutlineColor
+			};
 		}
 
 		return StyleTemplate.Create();
